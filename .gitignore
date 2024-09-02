@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+lexer
+cool-lex.cc
