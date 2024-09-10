@@ -33,3 +33,6 @@
 
 lexer
 cool-lex.cc
+cgen
+parser
+semant
