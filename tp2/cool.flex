@@ -47,36 +47,34 @@ extern YYSTYPE cool_yylval;
 
 %option noyywrap
 
-/*
- * Define names for regular expressions here.
- */
-
-DARROW          =>
+DIGIT    [0-9]+
+COMMENT_LINE  --*.
+COMMENT_BLOCK \(\*.|\n\*\)
+IF       if
 
 %%
 
- /*
-  *  Nested comments
-  */
+{COMMENT_LINE} {
+    cool_yylval.symbol = inttable.add_string(yytext);
+    return (LE);
+}
 
+{COMMENT_BLOCK} {
+    cool_yylval.symbol = inttable.add_string(yytext);
+    return (LE);
+}
 
- /*
-  *  The multiple-character operators.
-  */
-{DARROW}		{ return (DARROW); }
+{IF} {
+    cool_yylval.symbol = inttable.add_string(yytext);
+    return (IF);
+}
 
- /*
-  * Keywords are case-insensitive except for the values true and false,
-  * which must begin with a lower-case letter.
-  */
+{DIGIT} {
+    cool_yylval.symbol = inttable.add_string(yytext);
+    return (INT_CONST);
+}
 
-
- /*
-  *  String constants (C syntax)
-  *  Escape sequence \c is accepted for all characters c. Except for 
-  *  \n \t \b \f, the result is c.
-  *
-  */
-
+{} {
+}
 
 %%
