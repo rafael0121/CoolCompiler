@@ -48,8 +48,10 @@ extern YYSTYPE cool_yylval;
 %option noyywrap
 
 DIGIT    [0-9]+
-COMMENT_LINE  --*.
-COMMENT_BLOCK \(\*.|\n\*\)
+
+
+COMMENT_LINE  --.*
+COMMENT_BLOCK \(\*(.|\n)*\*\)
 IF       if
 
 %%
