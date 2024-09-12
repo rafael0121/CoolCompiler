@@ -48,11 +48,19 @@ extern YYSTYPE cool_yylval;
 %option noyywrap
 
 DIGIT    [0-9]+
-
+ID       [a-z][0-9a-zA-Z_]*
+TYPE_ID  [A-Z][0-9a-zA-Z]*
 
 COMMENT_LINE  --.*
 COMMENT_BLOCK \(\*(.|\n)*\*\)
 IF       if
+
+TYPES   (Int|String|Object|Class|SELF_TYPE|self)
+
+\\ These are case insensitive, except true and false, which must start with lowercase, need to think how that works
+KEYOWRDS    (new|class|inherits|let|in|not|if|else|then|fi|while|loop|pool|case|of|esac|true|false|isvoid)
+
+WHITE_SPACES    (\n|\f|\r|\t|\v| )+
 
 %%
 
@@ -80,3 +88,11 @@ IF       if
 }
 
 %%
+
+int main(int argc, char* argv){
+    \\ Must test how the lexer iterates through the input file
+    cool_yylex* lexer = new cool_yylex;
+    while(lexer->yylex() != 0)
+        ;
+    return 0;
+}
