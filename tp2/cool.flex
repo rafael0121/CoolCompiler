@@ -51,9 +51,7 @@ extern YYSTYPE cool_yylval;
 DIGIT      [0-9]
 NUM        [+-]?{DIGIT}+
 OBJ_ID     [a-z][0-9a-zA-Z_]*
-TYPE_ID    [A-Z][0-9a-zA-Z]*
-
-TYPES   (Int|String|Object|Class|SELF_TYPE|self)
+TYPE_ID    ([A-Z][0-9a-zA-Z_]*)|self
 
 /* Keywords are case insensitive, except true and false, which must start with lowercase */
 NEW_KW      [?i:new]
@@ -63,7 +61,7 @@ INHERITS_KW [?i:inherits]
 LET_KW      [?i:let]
 IN_KW       [?i:in]
 
-IF_KW       [?i:if]
+IF_KW       (?i:if)
 THEN_KW     [?i:then]
 ELSE_KW     [?i:else]
 FI_KW       [?i:FI]
@@ -77,8 +75,8 @@ OF_KW       [?i:of]
 ESAC_KW     [?i:esac]
 
 NOT_KW      [?i:not]
-TRUE_KW     t[?i:rue]
-FALSE_KW    f[?i:alse]
+TRUE_KW     t(?i:rue)
+FALSE_KW    f(?i:alse)
 ISVOID_KW   [?i:isvoid]
 
 /* Special characters and exceptions that may and cannot appear on a string */
@@ -101,14 +99,33 @@ NEWLINE         \n
 \n      curr_lineno++;
 }
 
+{IF_KW} {
+    cool_yylval.symbol = stringtable.add_string(yytext);
+    return (IF);
+}
+
+{TRUE_KW} {
+    printf("token: %s ", yytext);
+    stringtable.add_string(yytext);
+    cool_yylval.boolean = true;
+    return (BOOL_CONST);
+} 
+
+{FALSE_KW} {
+    printf("token: %s ", yytext);
+    stringtable.add_string(yytext);
+    cool_yylval.boolean = false;
+    return (BOOL_CONST);
+}
+
+{TYPE_ID} {
+    cool_yylval.symbol = stringtable.add_string(yytext);
+    return (TYPEID);
+}
+
 {OBJ_ID} {
     cool_yylval.symbol = stringtable.add_string(yytext);
     return (OBJECTID);
-}
-
-if {
-    cool_yylval.symbol = stringtable.add_string(yytext);
-    return (IF);
 }
 
 {NUM} {
@@ -121,8 +138,8 @@ if {
 {WHITE_SPACES} { }
 
 . {
-    printf("Erro na linha: %i", curr_lineno);
-    return ERROR;
+    printf("Erro na linha: %i token: %s \n", curr_lineno, yytext);
+    return (ERROR);
 }
 
 %%
