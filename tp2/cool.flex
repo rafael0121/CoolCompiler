@@ -44,55 +44,61 @@ extern YYSTYPE cool_yylval;
  */
 
 %}
-
 %option noyywrap
 
-DIGIT    [0-9]+
-ID       [a-z][0-9a-zA-Z_]*
-TYPE_ID  [A-Z][0-9a-zA-Z]*
+%s com_block
 
-COMMENT_LINE  --.*
-COMMENT_BLOCK \(\*(.|\n)*\*\)
+DIGIT      [0-9]
+NUM        [+-]?{DIGIT}+
+OBJ_ID     [a-z][0-9a-zA-Z_]*
+TYPE_ID    [A-Z][0-9a-zA-Z]*
+
 IF       if
 
 TYPES   (Int|String|Object|Class|SELF_TYPE|self)
 
-\\ These are case insensitive, except true and false, which must start with lowercase, need to think how that works
-KEYOWRDS    (new|class|inherits|let|in|not|if|else|then|fi|while|loop|pool|case|of|esac|true|false|isvoid)
+/* These are case insensitive, except true and false, which must start with lowercase,
+need to think how that works*/
+KEYWORDS    (new|class|inherits|let|in|not|if|else|then|fi|while|loop|pool|case|of|esac|true|false|isvoid)
 
-WHITE_SPACES    (\n|\f|\r|\t|\v| )+
+WHITE_SPACES    [\f\r\t\v ]+
+NEWLINE         \n
 
 %%
 
-{COMMENT_LINE} {
-    cool_yylval.symbol = inttable.add_string(yytext);
-    return (LE);
+<INITIAL>{
+"(*"    BEGIN(com_block);
 }
 
-{COMMENT_BLOCK} {
-    cool_yylval.symbol = inttable.add_string(yytext);
-    return (LE);
+<com_block>{
+"*)"    BEGIN(INITIAL);
+[^*\n]+
+"*"
+\n      curr_lineno++;
 }
 
-{IF} {
-    cool_yylval.symbol = inttable.add_string(yytext);
+{OBJ_ID} {
+    cool_yylval.symbol = stringtable.add_string(yytext);
+    return (OBJECTID);
+}
+
+if {
+    cool_yylval.symbol = stringtable.add_string(yytext);
     return (IF);
 }
 
-{DIGIT} {
+{NUM} {
     cool_yylval.symbol = inttable.add_string(yytext);
     return (INT_CONST);
 }
 
-{} {
+{NEWLINE} { curr_lineno++; }
+
+{WHITE_SPACES} { }
+
+. {
+    printf("Erro na linha: %i", curr_lineno);
+    return ERROR;
 }
 
 %%
-
-int main(int argc, char* argv){
-    \\ Must test how the lexer iterates through the input file
-    cool_yylex* lexer = new cool_yylex;
-    while(lexer->yylex() != 0)
-        ;
-    return 0;
-}
