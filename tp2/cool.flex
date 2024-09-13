@@ -53,13 +53,37 @@ NUM        [+-]?{DIGIT}+
 OBJ_ID     [a-z][0-9a-zA-Z_]*
 TYPE_ID    [A-Z][0-9a-zA-Z]*
 
-IF       if
-
 TYPES   (Int|String|Object|Class|SELF_TYPE|self)
 
-/* These are case insensitive, except true and false, which must start with lowercase,
-need to think how that works*/
-KEYWORDS    (new|class|inherits|let|in|not|if|else|then|fi|while|loop|pool|case|of|esac|true|false|isvoid)
+/* Keywords are case insensitive, except true and false, which must start with lowercase */
+NEW_KW      [?i:new]
+CLASS_KW    [?i:class]
+INHERITS_KW [?i:inherits]
+
+LET_KW      [?i:let]
+IN_KW       [?i:in]
+
+IF_KW       [?i:if]
+THEN_KW     [?i:then]
+ELSE_KW     [?i:else]
+FI_KW       [?i:FI]
+
+WHILE_KW    [?i:while]
+LOOP_KW     [?i:loop]
+POOL_KW     [?i:pool]
+
+CASE_KW     [?i:case]
+OF_KW       [?i:of]
+ESAC_KW     [?i:esac]
+
+NOT_KW      [?i:not]
+TRUE_KW     t[?i:rue]
+FALSE_KW    f[?i:alse]
+ISVOID_KW   [?i:isvoid]
+
+/* Special characters and exceptions that may and cannot appear on a string */
+STRING_SPEC     [\b\t\n\f]
+STRING_EXCPT    [EOF\0]
 
 WHITE_SPACES    [\f\r\t\v ]+
 NEWLINE         \n
