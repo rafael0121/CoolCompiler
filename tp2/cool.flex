@@ -54,7 +54,6 @@ DIGIT      [0-9]
 NUM        [+-]?{DIGIT}+
 OBJ_ID     [a-z][0-9a-zA-Z_]*
 TYPE_ID    ([A-Z][0-9a-zA-Z_]*)|self
-CLOSE_COM   \*)
 
 /* Keywords are case insensitive, except true and false, which must start with lowercase */
 NEW_KW      (?i:new)
@@ -75,6 +74,7 @@ POOL_KW     (?i:pool)
 
 CASE_KW     (?i:case)
 OF_KW       (?i:of)
+DARROW      =>
 ESAC_KW     (?i:esac)
 
 NOT_KW      (?i:not)
@@ -82,8 +82,10 @@ TRUE_KW     t(?i:rue)
 FALSE_KW    f(?i:alse)
 ISVOID_KW   (?i:isvoid)
 
+ASSIGN      <-
+
 /* Special characters and exceptions that may and cannot appear on a string */
-STRING_EXCPT    [EOF\0\b\t\n\f]
+STRING_EXCPT    [\0\b\t\n\f]
 
 WHITE_SPACES    [\f\r\t\v ]+
 NEWLINE         \n
@@ -126,6 +128,13 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
         return (ERROR);
     }
 
+    <<EOF>> {
+        BEGIN(INITIAL);
+        cursor = 0;
+        cool_yylval.error_msg = "Unterminated string constant";
+        return (ERROR);
+    }
+
     . {
     }
 }
@@ -141,6 +150,13 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
     }
 
     {STRING_EXCPT} {
+        BEGIN(INITIAL);
+        cursor = 0;
+        cool_yylval.error_msg = "Unterminated string constant";
+        return (ERROR);
+    }
+    
+    <<EOF>> {
         BEGIN(INITIAL);
         cursor = 0;
         cool_yylval.error_msg = "Unterminated string constant";
@@ -193,6 +209,11 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
     stringtable.add_string(yytext);
     cool_yylval.boolean = false;
     return (BOOL_CONST);
+}
+
+{NEW_KW} {
+    cool_yylval.symbol = stringtable.add_string(yytext);
+    return (NEW);
 }
 
 {IF_KW} {
@@ -283,6 +304,16 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
 {NUM} {
     cool_yylval.symbol = inttable.add_string(yytext);
     return (INT_CONST);
+}
+
+{DARROW} {
+    cool_yylval.symbol = stringtable.add_string(yytext);
+    return (DARROW);
+}
+
+{ASSIGN} {
+    cool_yylval.symbol = stringtable.add_string(yytext);
+    return (ASSIGN);
 }
 
 {OPERATORS} {

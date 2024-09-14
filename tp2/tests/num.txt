@@ -1,0 +1,32 @@
+if If iF
+true
+tRuE
+false
+fAlSe
+SELF_TYPE
+self
+Rafael
+"Hello World! Vict\0r;, %d aceitas (*_*) c|_| cafe? \t"
+"asdfgkasdf"
+out_string("\nJa vai? o Cafezin? (^_^) c[] \n");
++
+/
+-
+*
+=
+<
+.
+~
+,
+;
+:
+(
+)
+@
+{
+}
+"asdgfasd
+case x of
+    String => {
+    }
+Int id <- 999;
