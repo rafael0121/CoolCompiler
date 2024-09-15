@@ -343,12 +343,12 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
 }
 
 {TYPE_ID} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
+    cool_yylval.symbol = idtable.add_string(yytext);
     return (TYPEID);
 }
 
 {OBJ_ID} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
+    cool_yylval.symbol = idtable.add_string(yytext);
     return (OBJECTID);
 }
 

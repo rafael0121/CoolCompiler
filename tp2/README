@@ -131,12 +131,12 @@ The keywords in the COOL language are case insensitive, apart from 'true' and 'f
 The final definitions contain special characters, like blank spaces and escape characters, and the remainder operators, used for arithmetic, comparison, assignment, and others. 
 
 Most of the actions are pretty much straightforward, when we find a token that matches one of the patterns created previously, we simply add its symbol to the stringtable and return the token that it matches, this is the case for the keywords, identifiers, numbers and operators. 
-When finding a new line operator '\n' we simply increment the variable curr_lineno, which is used to keep track of the current line in the file. 
+When finding a new line operator '\n' we simply increment the variable curr_lineno, which is used to keep track of the current line in the input file. 
 When finding a whitespace, we don't do anything. 
 And when finding anything else we raise an error, because whatever was found by the lexer shouldn't even be in the code in the first place. 
 
-To parse comments and strings we take a different route, since they can span through multiple lines and can contain escape characters, which need to be parsed. 
-We utilize state conditions, which helps keep track of the current state of the lexer, and allows us to switch between them when needed. 
+To parse comments and strings we take a different route, since they can span through multiple lines and can contain escape characters which need to be parsed. 
+We utilize state conditions, which helps keep track of the current state of the lexer, and allows us to switch between them when needed, the rpogram allways starts in the INITIAl state.
 For the comments we have two possible states, one for the block comment and one for the inline comment. 
 When finding the pattern '--' we switch to the inline comment state, which may end with an end of line character '\n', an EOF, or the same pattern '--', returning to the INITIAL state. Everything else is ignored. 
 When finding the pattern '(*' we switch to the block comment state, which must end with the pattern '*)', returning to the INITIAL state, finding an EOF results in an error, the rest is ignored. 
@@ -147,7 +147,8 @@ In this state we add the characters in the string to our string buffer, whose po
 It is necessary to parse the special ASCII characters, like \n, these characters themselves may NOT appear in the string because this will result in the error "Unterminated string constant", however they can be added to the buffer as long as they appear as two separated characters, like '\' and 'n', in this case they will be parsed as a single character and added to the buffer. 
 In the event where the string is longer than 1024 characters we raise the "String constant too long" error, and switch to the state eat_string, which ignores the rest of the string until we find a new " character, sending the program back to the INITIAL state, if we find an EOF or an escaped character we raise a second error, but now for unterminated string constant. 
 
-We developed tests to each token and rule, covering all situations, right and errors, while we were creating the rules. After, we tested the lexer in real Cool codes using our own code from "tp1" and the codes in examples folder.
+We conducted tests to each token and rule, covering every situations, while developing the lexer, the folder 'tests' contain some examples of the entries we used.
+Besides that, we also tested the lexer in real COOL codes, we utilized the codes we developed for TP1, which can also be found in the 'tests' folder, and for every example code available in the COOL directory "/var/tmp/cool/examples".
 
 Students:
 Rafael Ramos de Andrade
