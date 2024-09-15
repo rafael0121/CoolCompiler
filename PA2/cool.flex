@@ -251,94 +251,76 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
 }
 
 {TRUE_KW} {
-    stringtable.add_string(yytext);
     cool_yylval.boolean = true;
     return (BOOL_CONST);
 } 
 
 {FALSE_KW} {
-    stringtable.add_string(yytext);
     cool_yylval.boolean = false;
     return (BOOL_CONST);
 }
 
 {NEW_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (NEW);
 }
 
 {IF_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (IF);
 }
 
 {CLASS_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (CLASS);
 }
 
 {INHERITS_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (INHERITS);
 }
 
 {LET_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (LET);
 }
 
 {IN_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (IN);
 }
 
 {THEN_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (THEN);
 }
 
 {ELSE_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (ELSE);
 }
 
 {FI_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (FI);
 }
 
 {WHILE_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (WHILE);
 }
 
 {LOOP_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (LOOP);
 }
 
 {POOL_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (POOL);
 }
 
 {OF_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (OF);
 }
 
 {ESAC_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (ESAC);
 }
 
 {NOT_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (NOT);
 }
 
 {ISVOID_KW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (ISVOID);
 }
 
@@ -358,17 +340,14 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
 }
 
 {DARROW} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (DARROW);
 }
 
 {ASSIGN} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (ASSIGN);
 }
 
 {OPERATORS} {
-    cool_yylval.symbol = stringtable.add_string(yytext);
     return (*yytext);
 }
 

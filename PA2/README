@@ -147,8 +147,8 @@ In this state we add the characters in the string to our string buffer, whose po
 It is necessary to parse the special ASCII characters, like \n, these characters themselves may NOT appear in the string because this will result in the error "Unterminated string constant", however they can be added to the buffer as long as they appear as two separated characters, like '\' and 'n', in this case they will be parsed as a single character and added to the buffer. 
 In the event where the string is longer than 1024 characters we raise the "String constant too long" error, and switch to the state eat_string, which ignores the rest of the string until we find a new " character, sending the program back to the INITIAL state, if we find an EOF or an escaped character we raise a second error, but now for unterminated string constant. 
 
-We conducted tests to each token and rule, covering every situations, while developing the lexer, the folder 'tests' contain some examples of the entries we used.
-Besides that, we also tested the lexer in real COOL codes, we utilized the codes we developed for TP1, which can also be found in the 'tests' folder, and for every example code available in the COOL directory "/var/tmp/cool/examples".
+We conducted tests to each token and rule, covering every situation, while developing the lexer, the folder 'tests' contain some examples of the entries we used.
+Besides that, we also tested the lexer in real COOL codes, we utilized the codes developed for TP1, which can also be found in the 'tests' folder, and for every example code available in the COOL directory "/var/tmp/cool/examples".
 
 Students:
 Rafael Ramos de Andrade
