@@ -226,6 +226,18 @@ OPERATORS       [+"/"\-"*"=<.~,;:()@{}]
         cursor++;
     }
 
+    /* Adds a escaped duoble quoutes to the buffer*/
+    "\\\"" {
+        string_buf[cursor] = '\"';
+        cursor++;
+    }
+
+    /* Adds a escaped bar to the buffer.*/
+    "\\\\" {
+        string_buf[cursor] = '\\';
+        cursor++;
+    }
+
     /* Adds normal characters to the buffer, while keeping track of its size */
     . {
         if (cursor >= MAX_STR_CONST) {
