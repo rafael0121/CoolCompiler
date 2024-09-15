@@ -123,3 +123,30 @@ Instructions
 Write-up for PA2
 ----------------
 
+In this practical activity we implemented a lexical analyzer for the COOL language. 
+We based our rules on the COOL manual, especially section 10, which describes the lexical structure of the language.
+
+The identifiers can define an object and a type, both of which consist of a sequence of numbers, letters and underscores. The main difference between them is that the object must always start with a lowercase letter and the type with an uppercase letter. The basic types of the language, like Integer, String, and Object fall inside the type definition, the keyword 'self' also falls under it, even though it starts with a lowercase. 
+The keywords in the COOL language are case insensitive, apart from 'true' and 'false', which must start with a lowercase letter. Therefore, our rules for them always starts with the option (?i:) which determines that the following pattern is case insensitive. 
+The final definitions contain special characters, like blank spaces and escape characters, and the remainder operators, used for arithmetic, comparison, assignment, and others. 
+
+Most of the actions are pretty much straightforward, when we find a token that matches one of the patterns created previously, we simply add its symbol to the stringtable and return the token that it matches, this is the case for the keywords, identifiers, numbers and operators. 
+When finding a new line operator '\n' we simply increment the variable curr_lineno, which is used to keep track of the current line in the file. 
+When finding a whitespace, we don't do anything. 
+And when finding anything else we raise an error, because whatever was found by the lexer shouldn't even be in the code in the first place. 
+
+To parse comments and strings we take a different route, since they can span through multiple lines and can contain escape characters, which need to be parsed. 
+We utilize state conditions, which helps keep track of the current state of the lexer, and allows us to switch between them when needed. 
+For the comments we have two possible states, one for the block comment and one for the inline comment. 
+When finding the pattern '--' we switch to the inline comment state, which may end with an end of line character '\n', an EOF, or the same pattern '--', returning to the INITIAL state. Everything else is ignored. 
+When finding the pattern '(*' we switch to the block comment state, which must end with the pattern '*)', returning to the INITIAL state, finding an EOF results in an error, the rest is ignored. 
+Also, when finding the '*)' pattern in the INITIAL state we raise the "Unmatched *)" error, since it means that a block comment was never opened. 
+
+To parse strings, we find the " character, which indicates the start of one, and sends us to the parse_string state. 
+In this state we add the characters in the string to our string buffer, whose position we track with the cursor variable, until we find the " character again, which indicates the end of the string, we then save the buffer string as a symbol, adding it to the string table and restarting the cursor before returning to the INITIAL state. 
+It is necessary to parse the special ASCII characters, like \n, these characters themselves may NOT appear in the string because this will result in the error "Unterminated string constant", however they can be added to the buffer as long as they appear as two separated characters, like '\' and 'n', in this case they will be parsed as a single character and added to the buffer. 
+In the event where the string is longer than 1024 characters we raise the "String constant too long" error, and switch to the state eat_string, which ignores the rest of the string until we find a new " character, sending the program back to the INITIAL state, if we find an EOF or an escaped character we raise a second error, but now for unterminated string constant. 
+
+Students:
+Rafael Ramos de Andrade
+Victor Gabriel Mendes Sundermann
