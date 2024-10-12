@@ -74,7 +74,7 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <class_> class
 %type <feature> feature
 %type <formal> formal
-%type <formals> formals
+%type <formals> formals_list
 %type <case_> case_
 %type <cases> cases
 %type <expression> expression
@@ -118,11 +118,22 @@ class	: CLASS TYPEID '{' cool_feature_list '}' ';' { $$ = class_($2,idtable.add_
 // dummy_feature_list:	/* empty */ {  $$ = nil_Features(); };
 
 cool_feature_list: /* empty */ {  $$ = nil_Features(); }
-    | OBJECTID ':' TYPEID ';' cool_feature_list {$$ = attr($1, $3, no_expr())}
-    | OBJECTID ':' TYPEID ASSIGN expression ';' cool_feature_list {$$ = attr($1, $3, $5)}
+    | cool_feature_list feature { $$ = append_Features($1,single_Features($2)); }
     ;
 
 feature:
+    OBJECTID ':' TYPEID ';' {$$ = attr($1, $3, no_expr()); }
+    | OBJECTID ':' TYPEID ASSIGN expression ';' {$$ = attr($1, $3, $5); }
+    | OBJECTID '(' formals_list ')' ':' TYPEID '{' expression '}' ';' {$$ = method($1, $3, $6, $8); }
+    ;
+
+formals_list: /* empty */ {  $$ = nil_Formals(); }
+    | formal { $$ = single_Formals($1); }
+    | formals_list formal { $$ = append_Formals($1,single_Formals($2)); }
+    ;
+
+formal:
+    OBJECTID ':' TYPEID {$$ = formal($1, $3); }
     ;
 
 expression:
