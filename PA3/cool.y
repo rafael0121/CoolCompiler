@@ -78,7 +78,7 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <case_> case_
 %type <cases> cases
 %type <expression> expression
-%type <expressions> expressions
+%type <expressions> expression_list
 %type <*error_msg> error_msg
 
 /* You will want to change the following line. */
@@ -129,7 +129,7 @@ feature:
 
 formals_list: /* empty */ {  $$ = nil_Formals(); }
     | formal { $$ = single_Formals($1); }
-    | formals_list formal { $$ = append_Formals($1,single_Formals($2)); }
+    | formals_list ',' formal { $$ = append_Formals($1,single_Formals($3)); }
     ;
 
 formal:
@@ -138,8 +138,36 @@ formal:
 
 expression:
     OBJECTID ASSIGN expression
-    | 
+    | expression '@' TYPEID '.' OBJECTID '(' expression_list ')' 
+    | expression '.' OBJECTID '(' expression_list ')'
+    | OBJECTID '(' expression_list ')'
+    | IF expression THEN expression ELSE expression FI
+    | WHILE expression LOOP expression POOL
+    | '{' expression ';' expressions '}'
+    | NEW TYPEID
+    | ISVOID expression
+    | expression '+' expression
+    | expression '-' expression
+    | expression '*' expression
+    | expression '/' expression
+    | '~' expression
+    | expression '<' expression
+    | expression LE expression
+    | expression '=' expression
+    | NOT expression
+    | '(' expression ')'
+    | OBJECTID
+    | INT_CONST
+    | STR_CONST
+    | boolean { $$ = bool_const($1); }
     ;
+
+expression_list: /* empty */ {  $$ = nil_Expressions(); }
+    | expression { $$ = { single_Expressions($1) ; }
+    | expression_list ',' expression { $$ = append_Expressions($1, single_Expressions($3)) ; }
+    ;
+
+boolean: BOOL_CONST { $$ = $1 ? true : false ;};
 
 /* end of grammar */
 %%
