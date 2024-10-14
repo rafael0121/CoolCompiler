@@ -70,13 +70,13 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <symbol> symbol
 %type <boolean> boolean
 %type <program> program
-%type <classes> class_list
 %type <class_> class
+%type <classes> class_list
 %type <feature> feature
 %type <formal> formal
 %type <formals> formals_list
 %type <case_> case_
-%type <cases> cases
+%type <cases> case_list
 %type <expression> expression
 %type <expressions> expression_list
 %type <*error_msg> error_msg
@@ -137,34 +137,46 @@ formal:
     ;
 
 expression:
-    OBJECTID ASSIGN expression
-    | expression '@' TYPEID '.' OBJECTID '(' expression_list ')' 
-    | expression '.' OBJECTID '(' expression_list ')'
-    | OBJECTID '(' expression_list ')'
-    | IF expression THEN expression ELSE expression FI
-    | WHILE expression LOOP expression POOL
-    | '{' expression ';' expressions '}'
-    | NEW TYPEID
-    | ISVOID expression
-    | expression '+' expression
-    | expression '-' expression
-    | expression '*' expression
-    | expression '/' expression
-    | '~' expression
-    | expression '<' expression
-    | expression LE expression
-    | expression '=' expression
-    | NOT expression
-    | '(' expression ')'
-    | OBJECTID
-    | INT_CONST
-    | STR_CONST
+    OBJECTID ASSIGN expression {$$ = assign($1, $3);}
+    | expression '@' TYPEID '.' OBJECTID '(' expression_list ')' {$$ = static_dispatch($1, $3, $5, $7);}
+    | expression '.' OBJECTID '(' expression_list ')' {$$ = dispatch($1, $3, $5);}
+    | OBJECTID '(' expression_list ')' {;}
+    | IF expression THEN expression ELSE expression FI {$$ = cond($2, $4, $6);}
+    | WHILE expression LOOP expression POOL {$$ = loop($2, $4);}
+    | '{' expression ';' expression_list '}' {$$ = block($4);}
+    | LET OBJECTID ':' TYPEID ASSIGN expression IN expression {$$ = let($2, $4, $6, $8);}
+    | CASE expression OF case_list ESAC {$$ = typcase($2, $4);}
+    | NEW TYPEID {$$ = new_($2);}
+    | ISVOID expression {$$ = isvoid($2);}
+    | expression '+' expression {$$ = plus($1,$3);}
+    | expression '-' expression {$$ = sub($1,$3);}
+    | expression '*' expression {$$ = mul($1,$3);}
+    | expression '/' expression {$$ = divide($1,$3);}
+    | '~' expression { $$ = neg($2);}
+    | expression '<' expression {$$ = lt($1,$3);}
+    | expression LE expression {$$ = leq($1,$3);}
+    | expression '=' expression {$$ = eq($1,$3);}
+    | NOT expression {$$ = neg($2);}
+    | '(' expression ')' {$$ = comp($2);}
+    | OBJECTID {$$ = object($1);}
+    | INT_CONST {$$ = int_const($1);}
+    | STR_CONST {$$ = string_const($1);}
     | boolean { $$ = bool_const($1); }
     ;
 
 expression_list: /* empty */ {  $$ = nil_Expressions(); }
-    | expression { $$ = { single_Expressions($1) ; }
+    | expression { $$ = single_Expressions($1) ; }
     | expression_list ',' expression { $$ = append_Expressions($1, single_Expressions($3)) ; }
+    ;
+
+case_:
+    OBJECTID ':' TYPEID DARROW expression { $$ = branch($1, $3, $5); } /* dunno if this works */
+    ;
+
+case_list:
+    /* empty */ {  $$ = nil_Cases(); }
+    | case_ { $$ = single_Cases($1) ; }
+    | case_list ',' case_ { $$ = append_Cases($1, single_Cases($3)) ; }
     ;
 
 boolean: BOOL_CONST { $$ = $1 ? true : false ;};
