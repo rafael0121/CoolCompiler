@@ -67,7 +67,6 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
       documentation for details). */
 
 /* Declare types for the grammar's non-terminals. */
-%type <symbol> symbol
 %type <boolean> boolean
 %type <program> program
 %type <class_> class
@@ -78,7 +77,9 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <case_> case_
 %type <cases> case_list
 %type <expression> expression
+%type <expression> let_list
 %type <expressions> expression_list
+%type <expressions> expression_list_no_empty
 %type <*error_msg> error_msg
 
 /* You will want to change the following line. */
@@ -112,13 +113,15 @@ class_list : class			/* single class */
 /* If no parent is specified, the class inherits from the Object class. */
 class	: CLASS TYPEID '{' cool_feature_list '}' ';' { $$ = class_($2,idtable.add_string("Object"),$4, stringtable.add_string(curr_filename)); }
 	  | CLASS TYPEID INHERITS TYPEID '{' cool_feature_list '}' ';' { $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
+	  | CLASS error '{' error '}' ';'
     ;
 
 /* Feature list may be empty, but no empty features in list. */
 // dummy_feature_list:	/* empty */ {  $$ = nil_Features(); };
 
 cool_feature_list: /* empty */ {  $$ = nil_Features(); }
-    | cool_feature_list feature { $$ = append_Features($1,single_Features($2)); }
+    | feature cool_feature_list { $$ = append_Features($2,single_Features($1)); }
+    | feature error
     ;
 
 feature:
@@ -143,8 +146,9 @@ expression:
     | OBJECTID '(' expression_list ')' {;}
     | IF expression THEN expression ELSE expression FI {$$ = cond($2, $4, $6);}
     | WHILE expression LOOP expression POOL {$$ = loop($2, $4);}
-    | '{' expression ';' expression_list '}' {$$ = block($4);}
-    | LET OBJECTID ':' TYPEID ASSIGN expression IN expression {$$ = let($2, $4, $6, $8);}
+    | '{' expression_list_no_empty '}' {$$ = block($2);}
+    | LET OBJECTID ':' TYPEID ASSIGN expression let_list {$$ = let($2, $4, $6, $7);}
+    | LET OBJECTID ':' TYPEID let_list {$$ = let($2, $4, no_expr(), $5);}
     | CASE expression OF case_list ESAC {$$ = typcase($2, $4);}
     | NEW TYPEID {$$ = new_($2);}
     | ISVOID expression {$$ = isvoid($2);}
@@ -156,17 +160,23 @@ expression:
     | expression '<' expression {$$ = lt($1,$3);}
     | expression LE expression {$$ = leq($1,$3);}
     | expression '=' expression {$$ = eq($1,$3);}
-    | NOT expression {$$ = neg($2);}
-    | '(' expression ')' {$$ = comp($2);}
+    | NOT expression {$$ = comp($2);}
+    | '(' expression ')' {$$ = $2;}
     | OBJECTID {$$ = object($1);}
     | INT_CONST {$$ = int_const($1);}
     | STR_CONST {$$ = string_const($1);}
     | boolean { $$ = bool_const($1); }
+    | '{' error '}'
     ;
 
 expression_list: /* empty */ {  $$ = nil_Expressions(); }
     | expression { $$ = single_Expressions($1) ; }
     | expression_list ',' expression { $$ = append_Expressions($1, single_Expressions($3)) ; }
+    ;
+
+expression_list_no_empty:
+      expression ';' { $$ = single_Expressions($1) ; }
+    | expression_list_no_empty expression ';' { $$ = append_Expressions($1, single_Expressions($2)) ; }
     ;
 
 case_:
@@ -178,6 +188,12 @@ case_list:
     | case_ { $$ = single_Cases($1) ; }
     | case_list ',' case_ { $$ = append_Cases($1, single_Cases($3)) ; }
     ;
+
+let_list:
+      ',' OBJECTID ':' TYPEID ASSIGN expression let_list {$$ = $7; let($2, $4, $6, $7);}
+    | ',' OBJECTID ':' TYPEID let_list {$$ = $5; let($2, $4, no_expr(), $5);}
+    | IN expression { $$ = $2 ; }
+    | error let_list
 
 boolean: BOOL_CONST { $$ = $1 ? true : false ;};
 
