@@ -143,7 +143,7 @@ expression:
     OBJECTID ASSIGN expression {$$ = assign($1, $3);}
     | expression '@' TYPEID '.' OBJECTID '(' expression_list ')' {$$ = static_dispatch($1, $3, $5, $7);}
     | expression '.' OBJECTID '(' expression_list ')' {$$ = dispatch($1, $3, $5);}
-    | OBJECTID '(' expression_list ')' {;}
+    | OBJECTID '(' expression_list ')' {$$ = dispatch(no_expr(), $1, $3);;}
     | IF expression THEN expression ELSE expression FI {$$ = cond($2, $4, $6);}
     | WHILE expression LOOP expression POOL {$$ = loop($2, $4);}
     | '{' expression_list_no_empty '}' {$$ = block($2);}
