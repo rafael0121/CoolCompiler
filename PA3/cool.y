@@ -80,10 +80,9 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <expression> let_list
 %type <expressions> expression_list
 %type <expressions> expression_list_no_empty
-%type <*error_msg> error_msg
 
 /* You will want to change the following line. */
-// %type <features> dummy_feature_list
+
 %type <features> cool_feature_list
 
 /* Precedence declarations go here. Probabaly OK */
@@ -116,9 +115,6 @@ class	: CLASS TYPEID '{' cool_feature_list '}' ';' { $$ = class_($2,idtable.add_
 	  | CLASS error '{' error '}' ';'
     ;
 
-/* Feature list may be empty, but no empty features in list. */
-// dummy_feature_list:	/* empty */ {  $$ = nil_Features(); };
-
 cool_feature_list: /* empty */ {  $$ = nil_Features(); }
     | feature cool_feature_list { $$ = append_Features($2,single_Features($1)); }
     | feature error
@@ -143,7 +139,7 @@ expression:
     OBJECTID ASSIGN expression {$$ = assign($1, $3);}
     | expression '@' TYPEID '.' OBJECTID '(' expression_list ')' {$$ = static_dispatch($1, $3, $5, $7);}
     | expression '.' OBJECTID '(' expression_list ')' {$$ = dispatch($1, $3, $5);}
-    | OBJECTID '(' expression_list ')' {$$ = dispatch(no_expr(), $1, $3);;}
+    | OBJECTID '(' expression_list ')' {$$ = dispatch(no_expr(), $1, $3);}
     | IF expression THEN expression ELSE expression FI {$$ = cond($2, $4, $6);}
     | WHILE expression LOOP expression POOL {$$ = loop($2, $4);}
     | '{' expression_list_no_empty '}' {$$ = block($2);}
@@ -185,8 +181,8 @@ case_:
 
 case_list:
     /* empty */ {  $$ = nil_Cases(); }
-    | case_ { $$ = single_Cases($1) ; }
-    | case_list ',' case_ { $$ = append_Cases($1, single_Cases($3)) ; }
+    | case_ ';' { $$ = single_Cases($1) ; }
+    | case_list case_ ';' { $$ = append_Cases($1, single_Cases($2)) ; }
     ;
 
 let_list:
