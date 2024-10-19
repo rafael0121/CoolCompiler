@@ -36,3 +36,4 @@ cool-lex.cc
 cgen
 parser
 semant
+.vscode/settings.json

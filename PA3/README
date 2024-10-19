@@ -142,3 +142,20 @@ Instructions
 
 Write-up for PA3
 ----------------
+
+In this project we were tasked with designing the syntactic parser for the Cool language, the file cool.y contains the definitions and rules that we created for the language, our decisions were mainly based around information's we found regarding the language and its compositions on the Cool Manual, Cool Tour and the Bison Documentation. 
+
+The terminals and non-terminals that we are using are listed between lines 70 and 83. They describe the tokens listed in the Union section, line 26, we also decided to add a definition for the various variables that may appear during the LET command. 
+
+The precedences for the operators were defined based on page 17 of Cool Manual, which states that binary operators are LEFT associative, ASSING is right associative, and the three comparison operators '<', '=' and '<=' are non-associative. 
+
+The rules and derivations were created following page 16 on the Cool Manual, which describes the syntax tree of the language, we reproduced these rules in Bison. 
+We decided to divide certain rules that had optional parameters into two instances, one that didn't receive any optional parameter and another that could receive one or more parameters, using a list. This decision is especially used for the formals, features, expressions, cases and let_variables. 
+
+The expressions of the language also follow the definitions of the Syntax Tree on the Cool Manual, when finding a certain expression, it calls the constructor of that expression written on the cool-tree.aps file, which is then used to create the abstract syntax tree. An in-depth explanation of these constructors as well as each function they describe can be found in the Cool Tour, section 6. Besides the already defined expressions in the tree, we also added an auxiliary expression for the LET command, defined in line X, due to its special behavior of being able to receive multiple instances of variables, which all must be in the same scope. 
+ 
+Finally, we treat the errors defined in the specification of the project by adding a possible error terminal to some rules, which then call the bison function that parses these errors and keep the program running. These errors are present in the definitions for Features, Classes and Expressions. 
+
+Students:
+Rafael Ramos de Andrade
+Victor Gabriel Mendes Sündermann
