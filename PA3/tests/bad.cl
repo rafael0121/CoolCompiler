@@ -27,3 +27,22 @@ Class D inherts A {
 Class E inherits A {
 ;
 
+(* no error:  due to previous error it skips the next class as long as it is correct*)
+Class E2 inherits A {
+};
+
+(* error: feature cannot start with uppercase and receives different type *)
+Class F inherits A {
+    f_val1 : Int <- 7;
+    f_val2 : String <- 9;
+    f_val4 : Int <- "WRONG";
+};
+
+(* error: LET variable link and usage outside block *)
+Class G inherits A {
+    LET g_val1 : String, g_val2 : Int IN {
+        g_val2 <- 1;
+    }
+    g_val1 <- "TEST";
+
+};
