@@ -152,10 +152,10 @@ The precedences for the operators were defined based on page 17 of Cool Manual, 
 The rules and derivations were created following page 16 on the Cool Manual, which describes the syntax tree of the language, we reproduced these rules in Bison. 
 We decided to divide certain rules that had optional parameters into two instances, one that didn't receive any optional parameter and another that could receive one or more parameters, using a list. This decision is especially used for the formals, features, expressions, cases and let_variables. 
 
-The expressions of the language also follow the definitions of the Syntax Tree on the Cool Manual, when finding a certain expression, it calls the constructor of that expression written on the cool-tree.aps file, which is then used to create the abstract syntax tree. An in-depth explanation of these constructors as well as each function they describe can be found in the Cool Tour, section 6. Besides the already defined expressions in the tree, we also added an auxiliary expression for the LET command, defined in line X, due to its special behavior of being able to receive multiple instances of variables, which all must be in the same scope. 
- 
+The expressions of the language also follow the definitions of the Syntax Tree on the Cool Manual, when finding a certain expression, it calls the constructor of that expression written on the cool-tree.aps file, which is then used to create the abstract syntax tree. An in-depth explanation of these constructors as well as each function they describe can be found in the Cool Tour, section 6.
+
 Finally, we treat the errors defined in the specification of the project by adding a possible error terminal to some rules, which then calls the bison function that parses these errors and keeps the program running. These errors are present in the definitions for Features, Classes and Expressions.  
- 
+
 We check whether the classes definitions are correct, so the IDs must be written according to the grammar, the inheritance must be a valid type and it must be closed correctly, features follow a similar rule, where the IDs must be valid and we evaluate the LET variables linkage and the use of expressions that extend their block scope. 
 
 We executed tests for the STACK program we developed in PA1 and for the example codes found in /var/tmp/cool/examples, we also modified the stack program to reproduce and test some errors, these files are listed as stack_studentName_bad.cl, in the bad.cl file we added base error tests especially aimed at the situations listed in the project specification. 

@@ -117,7 +117,7 @@ class	: CLASS TYPEID '{' cool_feature_list '}' ';' { $$ = class_($2,idtable.add_
 
 cool_feature_list: /* empty */ {  $$ = nil_Features(); }
     | feature cool_feature_list { $$ = append_Features($2,single_Features($1)); }
-    | feature error
+    | error cool_feature_list
     ;
 
 feature:
@@ -161,7 +161,7 @@ expression:
     | OBJECTID {$$ = object($1);}
     | INT_CONST {$$ = int_const($1);}
     | STR_CONST {$$ = string_const($1);}
-    | boolean { $$ = bool_const($1); }
+    | BOOL_CONST { $$ = bool_const($1 ? true : false); }
     | '{' error '}'
     ;
 
@@ -190,8 +190,7 @@ let_list:
     | ',' OBJECTID ':' TYPEID let_list {$$ = $5; let($2, $4, no_expr(), $5);}
     | IN expression { $$ = $2 ; }
     | error let_list
-
-boolean: BOOL_CONST { $$ = $1 ? true : false ;};
+    ;
 
 /* end of grammar */
 %%

@@ -31,18 +31,17 @@ Class E inherits A {
 Class E2 inherits A {
 };
 
-(* error: feature cannot start with uppercase and receives different type *)
+(* error: feature cannot start with uppercase*)
 Class F inherits A {
-    f_val1 : Int <- 7;
+    F_val1 : Int;
     f_val2 : String <- 9;
     f_val4 : Int <- "WRONG";
 };
 
-(* error: LET variable link and usage outside block *)
+(* error: Let expression must be inside a feature.*)
 Class G inherits A {
     LET g_val1 : String, g_val2 : Int IN {
         g_val2 <- 1;
-    }
+    };
     g_val1 <- "TEST";
-
 };
