@@ -8,7 +8,7 @@
 #include "tree.h"
 #include "cool.h"
 #include "stringtab.h"
-#define yylineno curr_lineno;
+
 extern int yylineno;
 
 inline Boolean copy_Boolean(Boolean b) {return b; }

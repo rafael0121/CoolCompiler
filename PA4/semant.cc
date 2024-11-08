@@ -92,7 +92,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 void ClassTable::install_basic_classes() {
 
     // The tree package uses these globals to annotate the classes built below.
-    curr_lineno  = 0;
+    yylineno = 0;
     Symbol filename = stringtable.add_string("<basic class>");
     
     // The following demonstrates how to create dummy parse trees to
