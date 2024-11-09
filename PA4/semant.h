@@ -24,6 +24,8 @@ private:
   int semant_errors;
   void install_basic_classes();
   void install_user_classes(Classes);
+  void build_inheritance_graph(Classes);
+  void check_inheritance(Classes);
   ostream& error_stream;
 
 public:
@@ -32,6 +34,9 @@ public:
   ostream& semant_error();
   ostream& semant_error(Class_ c);
   ostream& semant_error(Symbol filename, tree_node *t);
+  ostream& semant_error(tree_node *t)
+
+  Symbol lub(Symbol, Symbol);
 };
 
 

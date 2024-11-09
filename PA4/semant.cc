@@ -94,6 +94,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 
     install_basic_classes();
     install_user_classes(classes);
+    build_inheritance_graph(classes);
     check_inheritance(classes);
 }
 
@@ -203,6 +204,7 @@ void ClassTable::install_user_classes(Classes classes)
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
         Class_ c = classes->nth(i);
         Symbol name = c->get_name();
+        Symbol parent = c->get_parent_name();
         if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
             semant_error(c) << "Classe" << name << " ja foi definida\n";
         } else if(Environment->probe(name) != NULL) {
@@ -214,11 +216,11 @@ void ClassTable::install_user_classes(Classes classes)
 }
 
 //Check this thing also
-void ClassTable::build_inheritance_graph() {
+void ClassTable::build_inheritance_graph(Classes classes) {
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
         Class_ c = classes->nth(i);
         Symbol name = c->get_name();
-        Symbol parent = c->get_parent();
+        Symbol parent = c->get_parent_name();
         if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
             continue;
         } else if(parent == SELF_TYPE || parent == Int || parent == Bool || parent == Str) {
@@ -238,7 +240,7 @@ void ClassTable::check_inheritance(Classes classes)
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
         Class_ c = classes->nth(i);
         Symbol name = c->get_name();
-        Symbol parent = c->get_parent();
+        Symbol parent = c->get_parent_name();
         if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
             semant_error(c) << "Classe" << name << " não pode ser herdada\n";
         } else if(parent == SELF_TYPE || parent == Int || parent == Bool || parent == Str) {
@@ -250,6 +252,33 @@ void ClassTable::check_inheritance(Classes classes)
         } else if(Environment->lookup(parent) == NULL) {
             semant_error(c) << "Classe pai não declarada: " << parent << "\n";
         }
+    }
+}
+
+// Implementation of Least Upper Bound
+Symbol ClassTable::lub(Symbol l1, Symbol l2){
+    if(l1 == SELF_TYPE && l2 == SELF_TYPE) {
+        return SELF_TYPE;
+    } else if(l1 == SELF_TYPE) {
+        return l2;
+    } else if(l2 == SELF_TYPE) {
+        return l1;
+    } else if(l1 == l2) {
+        return l1;
+    } else {
+        Symbol p1 = l1;
+        Symbol p2 = l2;
+        while(p1 != No_class) {
+            while(p2 != No_class) {
+                if(p1 == p2) {
+                    return p1;
+                }
+                p2 = *Environment->lookup(p2);
+            }
+            p1 = *Environment->lookup(p1);
+            p2 = l2;
+        }
+        return Object;
     }
 }
 
@@ -271,7 +300,12 @@ void ClassTable::check_inheritance(Classes classes)
 ostream& ClassTable::semant_error(Class_ c)
 {                                                             
     return semant_error(c->get_filename(),c);
-}    
+}
+
+ostream& ClassTable::semant_error(tree_node *t) {
+    error_stream << ":" << t->get_line_number() << ": ";
+    return semant_error();
+}
 
 ostream& ClassTable::semant_error(Symbol filename, tree_node *t)
 {
@@ -337,6 +371,7 @@ Symbol int_const_class::check_type() {
 }
 
 Symbol comp_class::check_type() {
+    
     if(e1->check_type() != Bool) {
         classtable->semant_error(this) << "Operação de negação aplicada a um tipo não-booleano\n";
     }
@@ -347,7 +382,6 @@ Symbol comp_class::check_type() {
 Symbol leq_class::check_type() {
     if(e1->check_type() != Int || e2->check_type() != Int) {
         classtable->semant_error(this) << "Operação de comparação aplicada a um tipo não-inteiro\n";
-
     }
     type = Bool;
     return type;
@@ -364,7 +398,7 @@ Symbol eq_class::check_type() {
 }
 
 Symbol lt_class::check_type() {
-    if(e1->check_type()== Int  e2->check_type() == Int) {
+    if(e1->check_type()== Int && e2->check_type() == Int) {
         type = Bool;
         return type;
     } else{
@@ -452,7 +486,7 @@ Symbol typcase_class::check_type() {
     Symbol type1 = cases->nth(0)->check_type();
     for(int i = cases->first(); cases->more(i); i = cases->next(i)) {
         Symbol type2 = cases->nth(i)->check_type();
-        type = lub(type1, type2);
+        type = classtable->lub(type1, type2);
     }
     return type;
 }
@@ -472,7 +506,7 @@ Symbol cond_class::check_type() {
     }
     Symbol type1 = then_exp->check_type();
     Symbol type2 = else_exp->check_type();
-    type = lub(type1, type2);
+    type = classtable->lub(type1, type2);
     return type;
 }
 
