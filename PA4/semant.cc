@@ -94,6 +94,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 
     install_basic_classes();
     install_user_classes(classes);
+    check_inheritance(classes);
 }
 
 void ClassTable::install_basic_classes() {
@@ -200,9 +201,55 @@ void ClassTable::install_basic_classes() {
 void ClassTable::install_user_classes(Classes classes)
 {
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-            cout << "\n ------------------------------- \n";
-            cout << classes->nth(i)->get_name();
-            cout << "\n ------------------------------- \n";
+        Class_ c = classes->nth(i);
+        Symbol name = c->get_name();
+        if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
+            semant_error(c) << "Classe" << name << " ja foi definida\n";
+        } else if(Environment->probe(name) != NULL) {
+            semant_error(c) << "Classe já declarada: " << name << "\n";
+        } else {
+            Environment->addid(name, new Symbol(parent));
+        }
+    }
+}
+
+//Check this thing also
+void ClassTable::build_inheritance_graph() {
+    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        Class_ c = classes->nth(i);
+        Symbol name = c->get_name();
+        Symbol parent = c->get_parent();
+        if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
+            continue;
+        } else if(parent == SELF_TYPE || parent == Int || parent == Bool || parent == Str) {
+            semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
+        } else if(parent == Object || parent == IO) {
+            if(name != parent) {
+                semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
+            }
+        } else if(Environment->lookup(parent) == NULL) {
+            semant_error(c) << "Classe pai não declarada: " << parent << "\n";
+        }
+    }
+}
+
+void ClassTable::check_inheritance(Classes classes)
+{
+    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        Class_ c = classes->nth(i);
+        Symbol name = c->get_name();
+        Symbol parent = c->get_parent();
+        if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
+            semant_error(c) << "Classe" << name << " não pode ser herdada\n";
+        } else if(parent == SELF_TYPE || parent == Int || parent == Bool || parent == Str) {
+            semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
+        } else if(parent == Object || parent == IO) {
+            if(name != parent) {
+                semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
+            }
+        } else if(Environment->lookup(parent) == NULL) {
+            semant_error(c) << "Classe pai não declarada: " << parent << "\n";
+        }
     }
 }
 
@@ -251,53 +298,257 @@ Symbol object_class::check_type() {
     return type;
 }
 
-Symbol no_expr_class::check_type() {}
+Symbol no_expr_class::check_type() {
+    type = No_type;
+    return type;
+}
 
-Symbol isvoid_class::check_type() {}
+Symbol isvoid_class::check_type() {
+    e1->check_type();
+    type = Bool;
+    return type;
+}
 
-Symbol new__class::check_type() {}
+Symbol new__class::check_type() {
+    if(type_name == SELF_TYPE) {
+        type = SELF_TYPE;
+    } else if(Environment->lookup(type_name) != NULL) {
+        type = type_name;
+    } else {
+        classtable->semant_error(type_name, this) << "Tipo não declarado: " << type_name << "\n";
+        type = No_type;
+    }
+    return type;
+}
 
-Symbol string_const_class::check_type() {}
+Symbol string_const_class::check_type() {
+    type = Str;
+    return type;
+}
 
-Symbol bool_const_class::check_type() {}
+Symbol bool_const_class::check_type() {
+    type = Bool;
+    return type;
+}
 
-Symbol int_const_class::check_type() {}
+Symbol int_const_class::check_type() {
+    type = Int;
+    return type;
+}
 
-Symbol comp_class::check_type() {}
+Symbol comp_class::check_type() {
+    if(e1->check_type() != Bool) {
+        classtable->semant_error(this) << "Operação de negação aplicada a um tipo não-booleano\n";
+    }
+    type = Bool;
+    return type;
+}
 
-Symbol leq_class::check_type() {}
+Symbol leq_class::check_type() {
+    if(e1->check_type() != Int || e2->check_type() != Int) {
+        classtable->semant_error(this) << "Operação de comparação aplicada a um tipo não-inteiro\n";
 
-Symbol eq_class::check_type() {}
+    }
+    type = Bool;
+    return type;
+}
 
-Symbol lt_class::check_type() {}
+Symbol eq_class::check_type() {
+    bool isPrimitive1 = e1->check_type() == Int || e1->check_type() == Bool || e1->check_type() == Str;
+    bool isPrimitive2 = e2->check_type() == Int || e2->check_type() == Bool || e2->check_type() == Str;
+    if(e1->check_type() != e2->check_type() && (isPrimitive1 && isPrimitive2)) {
+        classtable->semant_error(this) << "Operação de comparação aplicada a tipos diferentes\n";
+    }
+    type = Bool;
+    return type;
+}
 
-Symbol neg_class::check_type() {}
+Symbol lt_class::check_type() {
+    if(e1->check_type()== Int  e2->check_type() == Int) {
+        type = Bool;
+        return type;
+    } else{
+        type = Object;
+        classtable->semant_error(this) << "Operação de comparação aplicada a um tipo não-inteiro\n";
+    }
 
-Symbol divide_class::check_type() {}
+   return type;
+}
 
-Symbol mul_class::check_type() {}
+Symbol neg_class::check_type() {
+    if(e1->check_type() != Int) {
+        classtable->semant_error(this) << "Operação de negação aplicada a um tipo não-inteiro\n";
+    }
+    type = Int;
+    return type;
+}
 
-Symbol sub_class::check_type() {}
+Symbol divide_class::check_type() {
+    if(e1->check_type() != Int || e2->check_type() != Int) {
+        classtable->semant_error(this) << "Operação de divisão aplicada a um tipo não-inteiro\n";
+    }
+    type = Int;
+    return type;
+}
 
-Symbol plus_class::check_type() {}
+Symbol mul_class::check_type() {
+    if(e1->check_type() != Int || e2->check_type() != Int) {
+        classtable->semant_error(this) << "Operação de multiplicação aplicada a um tipo não-inteiro\n";
+    }
+    type = Int;
+    return type;
+}
 
-Symbol let_class::check_type() {}
+Symbol sub_class::check_type() {
+    if(e1->check_type() != Int || e2->check_type() != Int) {
+        classtable->semant_error(this) << "Operação de subtração aplicada a um tipo não-inteiro\n";
+    }
+    type = Int;
+    return type;
+}
 
-Symbol block_class::check_type() {}
+Symbol plus_class::check_type() {
+    if(e1->check_type() != Int || e2->check_type() != Int) {
+        classtable->semant_error(this) << "Operação de adição aplicada a um tipo não-inteiro\n";
+    }
+    type = Int;
+    return type;
+}
 
-Symbol typcase_class::check_type() {}
+Symbol let_class::check_type() {
+    Environment->enterscope();
+    Environment->addid(identifier, &type_decl);
 
-Symbol loop_class::check_type() {}
+    if(identifier == self) {
+        classtable->semant_error(this) << "Identificador self não pode ser usado em uma declaração let\n";
+    }
+    if(Environment->lookup(identifier) != NULL) {
+        classtable->semant_error(this) << "Identificador já declarado: " << identifier << "\n";
+    }
+    if(type_decl == SELF_TYPE) {
+        if(init->check_type() != SELF_TYPE) {
+            classtable->semant_error(this) << "Tipo de inicialização não corresponde ao tipo declarado\n";
+        }
+    } else if(type_decl != No_type) {
+        if(init->check_type() != type_decl) {
+            classtable->semant_error(this) << "Tipo de inicialização não corresponde ao tipo declarado\n";
+        }
+    }
+    
+    type = body->check_type();
+    Environment->exitscope();
+    return type;
+}
 
-Symbol cond_class::check_type() {}
+Symbol block_class::check_type() {
+    for(int i = body->first(); body->more(i); i = body->next(i)) {
+        type = body->nth(i)->check_type();
+    }
+    return type;
+}
 
-Symbol dispatch_class::check_type() {}
+Symbol typcase_class::check_type() {
+    type = No_type;
+    Symbol type1 = cases->nth(0)->check_type();
+    for(int i = cases->first(); cases->more(i); i = cases->next(i)) {
+        Symbol type2 = cases->nth(i)->check_type();
+        type = lub(type1, type2);
+    }
+    return type;
+}
 
-Symbol static_dispatch_class::check_type() {}
+Symbol loop_class::check_type() {
+    if(pred->check_type() != Bool) {
+        classtable->semant_error(this) << "Condição do loop não é booleana\n";
+    }
+    body->check_type();
+    type = Object;
+    return type;
+}
 
-Symbol assign_class::check_type() {}
+Symbol cond_class::check_type() {
+    if(pred->check_type() != Bool) {
+        classtable->semant_error(this) << "Condição do if não é booleana\n";
+    }
+    Symbol type1 = then_exp->check_type();
+    Symbol type2 = else_exp->check_type();
+    type = lub(type1, type2);
+    return type;
+}
 
-Symbol branch_class::check_type() {}
+//Review these three
+Symbol dispatch_class::check_type() {
+    Symbol type1 = expr->check_type();
+    if(type1 == SELF_TYPE) {
+        type1 = *Environment->lookup(self);
+    }
+    if(Environment->lookup(type1) == NULL) {
+        classtable->semant_error(this) << "Tipo não declarado: " << type1 << "\n";
+    }
+    if(Environment->lookup(type1)->lookup(name) == NULL) {
+        classtable->semant_error(this) << "Método não declarado: " << name << "\n";
+    }
+    Symbol type2 = Environment->lookup(type1)->lookup(name);
+    if(type2 == SELF_TYPE) {
+        type = SELF_TYPE;
+    } else {
+        type = type2;
+    }
+    return type;
+}
+
+Symbol static_dispatch_class::check_type() {
+    Symbol type1 = expr->check_type();
+    if(type1 == SELF_TYPE) {
+        type1 = *Environment->lookup(self);
+    }
+    if(Environment->lookup(type1) == NULL) {
+        classtable->semant_error(this) << "Tipo não declarado: " << type1 << "\n";
+    }
+    if(Environment->lookup(type1)->lookup(name) == NULL) {
+        classtable->semant_error(this) << "Método não declarado: " << name << "\n";
+    }
+    Symbol type2 = Environment->lookup(type1)->lookup(name);
+    if(type2 == SELF_TYPE) {
+        type = SELF_TYPE;
+    } else {
+        type = type2;
+    }
+    if(type != return_type) {
+        classtable->semant_error(this) << "Tipo de retorno não corresponde ao tipo declarado\n";
+    }
+    return type;
+}
+
+Symbol assign_class::check_type() {
+    if(name == self) {
+        classtable->semant_error(this) << "Atribuição ao self não é permitida\n";
+    }
+    if(Environment->lookup(name) == NULL) {
+        classtable->semant_error(this) << "Identificador não declarado: " << name << "\n";
+    }
+    Symbol type1 = Environment->lookup(name);
+    Symbol type2 = expr->check_type();
+    if(type1 == SELF_TYPE) {
+        type1 = *Environment->lookup(self);
+    }
+    if(type2 == SELF_TYPE) {
+        type2 = *Environment->lookup(self);
+    }
+    if(type1 != type2) {
+        classtable->semant_error(this) << "Tipo de atribuição não corresponde ao tipo declarado\n";
+    }
+    type = type2;
+    return type;
+}
+
+Symbol branch_class::check_type() {
+    Environment->enterscope();
+    Environment->addid(name, &type_decl);
+    type = expr->check_type();
+    Environment->exitscope();
+    return type;
+}
 
 
 
