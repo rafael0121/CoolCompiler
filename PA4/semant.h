@@ -23,6 +23,7 @@ class ClassTable {
 private:
   int semant_errors;
   void install_basic_classes();
+  void install_user_classes(Classes);
   ostream& error_stream;
 
 public:

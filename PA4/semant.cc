@@ -87,6 +87,8 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 
     /* Fill this in */
 
+    install_basic_classes();
+    install_user_classes(classes);
 }
 
 void ClassTable::install_basic_classes() {
@@ -94,7 +96,7 @@ void ClassTable::install_basic_classes() {
     // The tree package uses these globals to annotate the classes built below.
     yylineno = 0;
     Symbol filename = stringtable.add_string("<basic class>");
-    
+
     // The following demonstrates how to create dummy parse trees to
     // refer to basic Cool classes.  There's no need for method
     // bodies -- these are already built into the runtime system.
@@ -190,6 +192,16 @@ void ClassTable::install_basic_classes() {
 	       filename);
 }
 
+
+void ClassTable::install_user_classes(Classes classes)
+{
+    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
+            cout << "\n ------------------------------- \n";
+            cout << classes->nth(i)->get_name();
+            cout << "\n ------------------------------- \n";
+    }
+}
+
 ////////////////////////////////////////////////////////////////////
 //
 // semant_error is an overloaded function for reporting errors
@@ -222,8 +234,6 @@ ostream& ClassTable::semant_error()
     return error_stream;
 } 
 
-
-
 /*   This is the entry point to the semantic checker.
 
      Your checker should do the following two things:
@@ -251,5 +261,3 @@ void program_class::semant()
 	exit(1);
     }
 }
-
-
