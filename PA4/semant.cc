@@ -10,6 +10,8 @@
 extern int semant_debug;
 extern char *curr_filename;
 
+ClassTable *classtable;
+
 //////////////////////////////////////////////////////////////////////
 //
 // Symbols
@@ -46,6 +48,9 @@ static Symbol
     substr,
     type_name,
     val;
+
+SymbolTable<Symbol ,Symbol> *Environment = new SymbolTable<Symbol, Symbol>;
+
 //
 // Initializing the predefined symbols.
 //
@@ -192,7 +197,6 @@ void ClassTable::install_basic_classes() {
 	       filename);
 }
 
-
 void ClassTable::install_user_classes(Classes classes)
 {
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
@@ -234,6 +238,70 @@ ostream& ClassTable::semant_error()
     return error_stream;
 } 
 
+Symbol object_class::check_type() {
+    if(name == self) {
+        type = SELF_TYPE;
+    } else if(Environment->lookup(name) != NULL) {
+        type = *Environment->lookup(name);
+    } else {
+        classtable->semant_error(name, this) << "Tipo não declarado: " << name << "\n" ;
+        type = No_type;
+    };
+
+    return type;
+}
+
+Symbol no_expr_class::check_type() {}
+
+Symbol isvoid_class::check_type() {}
+
+Symbol new__class::check_type() {}
+
+Symbol string_const_class::check_type() {}
+
+Symbol bool_const_class::check_type() {}
+
+Symbol int_const_class::check_type() {}
+
+Symbol comp_class::check_type() {}
+
+Symbol leq_class::check_type() {}
+
+Symbol eq_class::check_type() {}
+
+Symbol lt_class::check_type() {}
+
+Symbol neg_class::check_type() {}
+
+Symbol divide_class::check_type() {}
+
+Symbol mul_class::check_type() {}
+
+Symbol sub_class::check_type() {}
+
+Symbol plus_class::check_type() {}
+
+Symbol let_class::check_type() {}
+
+Symbol block_class::check_type() {}
+
+Symbol typcase_class::check_type() {}
+
+Symbol loop_class::check_type() {}
+
+Symbol cond_class::check_type() {}
+
+Symbol dispatch_class::check_type() {}
+
+Symbol static_dispatch_class::check_type() {}
+
+Symbol assign_class::check_type() {}
+
+Symbol branch_class::check_type() {}
+
+
+
+
 /*   This is the entry point to the semantic checker.
 
      Your checker should do the following two things:
@@ -252,7 +320,7 @@ void program_class::semant()
     initialize_constants();
 
     /* ClassTable constructor may do some semantic analysis */
-    ClassTable *classtable = new ClassTable(classes);
+    classtable = new ClassTable(classes);
 
     /* some semantic analysis code may go here */
 

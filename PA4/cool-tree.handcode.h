@@ -109,7 +109,7 @@ void dump_with_types(ostream&,int);
 #define Case_EXTRAS                              \
 Symbol type;                                     \
 Symbol get_type() { return type; }               \
-virtual Symbol check_type() = 0                  \
+virtual Symbol check_type() = 0;                  \
 virtual void dump_with_types(ostream& ,int) = 0;
 
 
@@ -123,7 +123,7 @@ void dump_with_types(ostream& ,int);
 Symbol type;                                 \
 Symbol get_type() { return type; }           \
 Expression set_type(Symbol s) { type = s; return this; } \
-virtual Symbol check_type() = 0                  \
+virtual Symbol check_type() = 0;                  \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
 Expression_class() { type = (Symbol) NULL; }
