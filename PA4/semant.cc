@@ -215,42 +215,28 @@ void ClassTable::install_user_classes(Classes classes)
     }
 }
 
-//Check this thing also
-void ClassTable::build_inheritance_graph(Classes classes) {
-    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Class_ c = classes->nth(i);
-        Symbol name = c->get_name();
-        Symbol parent = c->get_parent_name();
-        if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
-            continue;
-        } else if(parent == SELF_TYPE || parent == Int || parent == Bool || parent == Str) {
-            semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
-        } else if(parent == Object || parent == IO) {
-            if(name != parent) {
-                semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
-            }
-        } else if(Environment->lookup(parent) == NULL) {
-            semant_error(c) << "Classe pai não declarada: " << parent << "\n";
-        }
-    }
-}
-
 void ClassTable::check_inheritance(Classes classes)
 {
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Class_ c = classes->nth(i);
-        Symbol name = c->get_name();
-        Symbol parent = c->get_parent_name();
-        if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
-            semant_error(c) << "Classe" << name << " não pode ser herdada\n";
-        } else if(parent == SELF_TYPE || parent == Int || parent == Bool || parent == Str) {
-            semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
-        } else if(parent == Object || parent == IO) {
-            if(name != parent) {
-                semant_error(c) << "Classe" << name << " não pode herdar de" << parent << "\n";
+        Symbol class_parent = classes->nth(i)->parent;
+        if (class_parent != Object && classtable->lookup(class_parent) != NULL{
+            semant_error(curr_class) << "Classe " << it->second->getName() << " herdada não definida " << it->second->getParentName() << ".\n";
+        }
+    }
+    
+    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        if (it->first == Object) continue;
+        curr_class = it->second;
+        Symbol cname = it->first;
+        Symbol pname = it->second->getParentName();
+        while (pname != Object) {
+            if (pname == cname) {
+                semant_error(curr_class) << "Class " << curr_class->getName() << ", or an ancestor of " << curr_class->getName() << ", is involved in an inheritance cycle.\n";
+                break;
             }
-        } else if(Environment->lookup(parent) == NULL) {
-            semant_error(c) << "Classe pai não declarada: " << parent << "\n";
+            if (classTable.find(pname) == classTable.end())
+                break;
+            pname = classTable[pname]->getParentName();
         }
     }
 }
@@ -512,23 +498,103 @@ Symbol cond_class::check_type() {
 
 //Review these three
 Symbol dispatch_class::check_type() {
-    Symbol type1 = expr->check_type();
-    if(type1 == SELF_TYPE) {
-        type1 = *Environment->lookup(self);
+     Symbol expr_type = expr->check_type();
+
+    if (expr_type != SELF_TYPE && !classtable->is_type_defined(expr_type)) {
+
+        classtable->semant_error(this) 
+            << "Dispatch on undefined class " 
+            << expr_type 
+            << ".\n";
+
+        this->set_type(Object);
+        return type;
     }
-    if(Environment->lookup(type1) == NULL) {
-        classtable->semant_error(this) << "Tipo não declarado: " << type1 << "\n";
+    
+    Symbol expr_type_name = expr_type == SELF_TYPE ? current_class_name : expr_type;
+    method_class* method_definition = lookup_method(expr_type_name, name);
+  
+    if (!method_definition) 
+    {
+        classtable->semant_error(this) 
+            << "Dispatch to undefined method " 
+            << name 
+            << ".\n";
+        
+        this->set_type(Object);
+        return Object;
     }
-    if(Environment->lookup(type1)->lookup(name) == NULL) {
-        classtable->semant_error(this) << "Método não declarado: " << name << "\n";
+
+    Symbol declared_return_type = method_definition->get_return_type();
+    Formals declared_method_args = method_definition->get_formals();
+    Expressions actual_method_args = this->actual;
+
+    int declared_method_args_count = 0;
+    int actual_method_args_count = 0;
+
+    while (declared_method_args->more(declared_method_args_count))
+        declared_method_args_count = declared_method_args->next(declared_method_args_count);
+    while (actual_method_args->more(actual_method_args_count))
+        actual_method_args_count = actual_method_args->next(actual_method_args_count);
+
+    if (declared_method_args_count != actual_method_args_count) {
+        classtable->semant_error(this) 
+            << "In the dispatch to method " 
+            << method_definition->get_name() 
+            << ", given number of arguments " 
+            << "(" << actual_method_args_count << ")"
+            << " differs from the declared method's "
+            << "number of arguments "
+            << "(" << declared_method_args_count << ")"
+            << ".\n";
     }
-    Symbol type2 = Environment->lookup(type1)->lookup(name);
-    if(type2 == SELF_TYPE) {
-        type = SELF_TYPE;
-    } else {
-        type = type2;
+
+    int declared_argument_ix = declared_method_args->first();
+    int actual_argument_ix = actual_method_args->first();
+
+    Formal declared_argument;
+    Expression actual_argument;
+    bool is_dispatch_valid = true;
+
+    while (
+        actual_method_args->more(actual_argument_ix) && 
+        declared_method_args->more(declared_argument_ix)
+    )
+    {
+        actual_argument = actual_method_args->nth(actual_argument_ix);
+        declared_argument = declared_method_args->nth(declared_argument_ix);
+
+        Symbol actual_argument_type = actual_argument->check_type();
+        Symbol declared_argument_type = declared_argument->get_type();
+
+        if (!classtable->is_subtype_of(actual_argument_type, declared_argument_type)) {
+            is_dispatch_valid = false;
+
+            classtable->semant_error(this) 
+                << "In the dispatch of the method " 
+                << method_definition->get_name() 
+                << ", type "
+                << actual_argument_type 
+                << " of provided argument " 
+                << declared_argument->get_name() 
+                << " is not compatible with the corresponding signature type " 
+                << declared_argument_type 
+                << " .\n";
+        }
+
+        actual_argument_ix = actual_method_args->next(actual_argument_ix);
+        declared_argument_ix = declared_method_args->next(declared_argument_ix);
     }
-    return type;
+    
+    if (!is_dispatch_valid)
+    {
+        this->set_type(Object);
+        return Object;
+    }
+
+    Symbol dispatch_type = declared_return_type == SELF_TYPE ? expr_type : declared_return_type;
+    this->set_type(dispatch_type);
+    return dispatch_type;
 }
 
 Symbol static_dispatch_class::check_type() {
@@ -583,9 +649,6 @@ Symbol branch_class::check_type() {
     Environment->exitscope();
     return type;
 }
-
-
-
 
 /*   This is the entry point to the semantic checker.
 
