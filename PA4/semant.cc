@@ -218,9 +218,9 @@ void ClassTable::install_user_classes(Classes classes)
 void ClassTable::check_inheritance(Classes classes)
 {
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Symbol class_parent = classes->nth(i)->parent;
-        if (class_parent != Object && classtable->lookup(class_parent) != NULL{
-            semant_error(curr_class) << "Classe " << it->second->getName() << " herdada não definida " << it->second->getParentName() << ".\n";
+        Symbol class_parent = classes->nth(i)->get_parent_name();
+        if (class_parent != Object && Environment->lookup(class_parent) != NULL){
+            semant_error(classes->nth(i)) << "Classe " << Environment->lookup(name) << " herdada não definida " << Environment->lookup(class_parent) << ".\n";
         }
     }
     
