@@ -101,8 +101,9 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 
     /* Fill this in */
     install_basic_classes();
-    install_user_classes(classes);
+    cout << "Installed basic" << endl;
     build_inheritance_graph(classes);
+    cout << "Built Inheritance" << endl;
 }
 
 void ClassTable::install_basic_classes() {
@@ -211,23 +212,6 @@ void ClassTable::install_basic_classes() {
 	inh_graph.insert(std::pair<Symbol, Class_>(Bool, Bool_class));
 	inh_graph.insert(std::pair<Symbol, Class_>(Str, Str_class));
 }
-
-void ClassTable::install_user_classes(Classes classes)
-{
-    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Class_ c = classes->nth(i);
-        Symbol name = c->get_name();
-        Symbol parent = c->get_parent_name();
-        if(name == SELF_TYPE || name == Object || name == IO || name == Int || name == Bool || name == Str) {
-            semant_error(c) << "Classe" << name << " ja foi definida\n";
-        } else if(Environment->probe(name) != NULL) {
-            semant_error(c) << "Classe já declarada: " << name << "\n";
-        } else {
-            Environment->addid(name, new Symbol(parent));
-        }
-    }
-}
-
 // Implementation of Least Upper Bound
 Symbol ClassTable::lub(Symbol l1, Symbol l2){
     if(l1 == SELF_TYPE && l2 == SELF_TYPE) {
@@ -431,10 +415,17 @@ method_class* get_class_method(Symbol class_name, Symbol method_name) {
 }
 
 attr_class* get_class_attr(Symbol class_name, Symbol attr_name) {
+    
+    cout << "Entered get class" << endl;
     std::map<Symbol, attr_class*> attrs = class_attrs[class_name];
-
-    if (attrs.find(attr_name) == attrs.end())
+    
+    if (attrs.find(attr_name) == attrs.end()){
+        cout << "Nullptr" << endl;
         return nullptr;
+    }
+        
+
+    cout << "Exiting" << endl;
 
     return attrs[attr_name];
 }
@@ -537,21 +528,24 @@ void build_attribute_scopes(Class_ current_class) {
 }
 
 void process_attr(Class_ current_class, attr_class* attr) {
+    cout << "Entered process attr" << endl;
     if (get_class_attr(current_class->get_name(), attr->get_name()) != nullptr)
     {
-        classtable->semant_error(current_class_definition) 
-            << " Attribute " 
-            << attr->get_name()
-            << " is an attribute of an inherited class.\n";
-        //raise_error();
+        cout << "1" << endl;
+        classtable->semant_error(current_class_definition) << " Attribute " << attr->get_name() << " is an attribute of an inherited class.\n";
+        cout << "2" << endl;
+        cerr << "Compilation halted due to static semantic errors." << endl;
+        cout << "3" << endl;
+        exit(1);
     }
-
     Symbol parent_type_name = current_class->get_parent_name();
     if (parent_type_name == No_type)
         return;
-
+    cout << "Still here" << endl;
     Class_ parent_definition = classtable->inh_graph[parent_type_name];
+    cout << "here" << endl;
     process_attr(parent_definition, attr);
+    cout << "out" << endl;
 }
 
 void process_method(Class_ current_class, method_class* original_method, method_class* parent_method) {
@@ -667,31 +661,39 @@ void register_class_and_its_methods(Class_ class_definition) {
 }
 
 void type_check(Class_ next_class) {
+    cout << "Started typecheck" << endl;
     current_class_name = next_class->get_name();
     current_class_definition = next_class;
     current_class_methods = get_class_methods(next_class);
     ensure_class_attributes_are_unique(next_class);
     current_class_attrs = get_class_attributes(next_class);
 
+    cout << "Environment" << endl;
     Environment->enterscope();
     Environment->addid(self, new Symbol(current_class_definition->get_name()));
 
+    cout << "Built attr scopes" << endl;
     build_attribute_scopes(next_class);
     
+    cout << "Curr class methods" << endl;
     for (const auto &x : current_class_methods) {
         process_method(next_class, x.second, x.second);
     }
 
+    cout << "Curr class attrs" << endl;
     for (const auto &x : current_class_attrs) {
         Symbol parent_type_name = classtable->inh_graph[current_class_name]->get_parent_name();
         Class_ parent_definition = classtable->inh_graph[parent_type_name];
+        cout << "Curr class attrs proc" << endl;
         process_attr(parent_definition, x.second);
     }
 
+    cout << "Curr class attr check" << endl;
     for (const auto &x : current_class_attrs) {
         x.second->check_type();
     }
 
+    cout << "Curr class methods check" << endl;
     for (const auto &x : current_class_methods) {
         x.second->check_type();
     }
@@ -1090,7 +1092,6 @@ Symbol dispatch_class::check_type() {
     return dispatch_type;
 }
 
-/*
 Symbol static_dispatch_class::check_type() {
     Symbol expr_type = expr->check_type();
 
@@ -1256,7 +1257,6 @@ Symbol branch_class::check_type() {
     return type;
 }
 
-*/
 
 //=================================================================================
 // Semant Main
@@ -1281,11 +1281,13 @@ void program_class::semant()
 
     /* ClassTable constructor may do some semantic analysis */
     classtable = new ClassTable(classes);
+    cout << "Constructed classtable" << endl;
 
     /* some semantic analysis code may go here */
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
         type_check(classes->nth(i));
     }
+    cout << "Finished typecheck" << endl;
 
     if (classtable->errors()) {
     cerr << "Compilation halted due to static semantic errors." << endl;
