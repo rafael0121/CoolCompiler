@@ -12,6 +12,15 @@ extern char *curr_filename;
 
 ClassTable *classtable;
 
+Symbol current_class_name;
+Class_ current_class_definition;
+
+std::map<Symbol, method_class*> current_class_methods;
+std::map<Symbol, attr_class*> current_class_attrs;
+
+std::map<Symbol, std::map<Symbol, method_class*>> class_methods;
+std::map<Symbol, std::map<Symbol, attr_class*>> class_attrs;
+
 //////////////////////////////////////////////////////////////////////
 //
 // Symbols
@@ -91,11 +100,9 @@ static void initialize_constants(void)
 ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) {
 
     /* Fill this in */
-
     install_basic_classes();
     install_user_classes(classes);
     build_inheritance_graph(classes);
-    check_parents_and_inheritance();
 }
 
 void ClassTable::install_basic_classes() {
@@ -335,7 +342,6 @@ bool ClassTable::check_parents_and_inheritance() {
     }
 }
 
-
 //=================================================================================
 // Semant Error
 //=================================================================================
@@ -362,9 +368,321 @@ ostream& ClassTable::semant_error()
     return error_stream;
 } 
 
+////////////////////////////////////////////////////////////////////
+//                          CLASS UTILITIES
+////////////////////////////////////////////////////////////////////
+
+std::map<Symbol, method_class*> get_class_methods(Class_ class_definition) {
+    std::map<Symbol, method_class*> class_methods;
+    Symbol class_name = class_definition->get_name();
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) 
+    {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_method())
+            continue;
+
+        method_class* method = static_cast<method_class*>(feature);
+        Symbol method_name = method->get_name();
+        
+        if (class_methods.find(method_name) != class_methods.end())
+        {
+            ostream& error_stream = classtable->semant_error(class_definition);
+            error_stream << "The method :";
+            method_name->print(error_stream);
+            error_stream << " has already been defined!\n";
+        }
+        else
+        {
+            class_methods[method_name] = method;
+        }
+    }
+    return class_methods;
+}
+
+method_class* get_class_method(Symbol class_name, Symbol method_name) {
+    std::map<Symbol, method_class*> methods = class_methods[class_name];
+
+    if (methods.find(method_name) == methods.end())
+        return nullptr;
+
+    return methods[method_name];
+}
+
+attr_class* get_class_attr(Symbol class_name, Symbol attr_name) {
+    std::map<Symbol, attr_class*> attrs = class_attrs[class_name];
+
+    if (attrs.find(attr_name) == attrs.end())
+        return nullptr;
+
+    return attrs[attr_name];
+}
+
+void ensure_class_attributes_are_unique(Class_ class_definition) {
+    std::set<Symbol> class_attrs;
+    Symbol class_name = class_definition->get_name();
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) 
+    {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_attr())
+            continue;
+
+        attr_class* attr = static_cast<attr_class*>(feature);
+        Symbol attr_name = attr->get_name();
+        
+        if (class_attrs.find(attr_name) != class_attrs.end())
+        {
+            classtable->semant_error(class_definition)
+                << "The attribute :"
+                << attr_name
+                << " has already been defined!\n";
+        }
+        class_attrs.insert(attr_name);
+    }
+}
+
+std::map<Symbol, attr_class*> get_class_attributes(Class_ class_definition) {
+    std::map<Symbol, attr_class*> class_attrs;
+    Symbol class_name = class_definition->get_name();
+    Features class_features = class_definition->get_features();
+
+    for (int i = class_features->first(); class_features->more(i); i = class_features->next(i)) 
+    {
+        Feature feature = class_features->nth(i);
+
+        if (!feature->is_attr())
+            continue;
+
+        attr_class* attr = static_cast<attr_class*>(feature);
+        Symbol attr_name = attr->get_name();
+        class_attrs[attr_name] = attr;
+    }
+
+    return class_attrs;
+}
+
+bool ClassTable::is_subtype_of(Symbol candidate, Symbol desired_type) {
+    if (candidate == No_type)
+        return true;
+        
+    if (candidate == SELF_TYPE) {
+        if (desired_type == SELF_TYPE)
+            return true;
+        else
+            candidate = current_class_name; 
+    }
+
+    Symbol current = candidate;
+
+    while (current != Object && current != desired_type)
+        current = Environment->lookup(current) ? *Environment->lookup(current) : Object;
+
+    return current == desired_type;
+}
+
+bool ClassTable::is_type_defined(Symbol symbol) {
+    return inh_graph.find(symbol) != inh_graph.end();
+}
+
+bool ClassTable::is_primitive(Symbol symbol) {
+    return (
+        symbol == Object ||
+        symbol == IO     ||
+        symbol == Int    ||
+        symbol == Bool   ||
+        symbol == Str
+    );
+}
 //=================================================================================
 // Check Types
 //=================================================================================
+
+void build_attribute_scopes(Class_ current_class) {
+    Environment->enterscope();
+    std::map<Symbol, attr_class*> attrs = get_class_attributes(current_class);
+    for(const auto &x : attrs) {
+        attr_class* attr_definition = x.second;
+        Environment->addid(
+            attr_definition->get_name(), 
+            new Symbol(attr_definition->get_type())
+        );
+    }
+
+    if(current_class->get_name() == Object)
+        return;
+
+    Symbol parent_type_name = current_class->get_parent_name();
+    Class_ parent_definition = classtable->inh_graph[parent_type_name];
+    build_attribute_scopes(parent_definition);
+}
+
+void process_attr(Class_ current_class, attr_class* attr) {
+    if (get_class_attr(current_class->get_name(), attr->get_name()) != nullptr)
+    {
+        classtable->semant_error(current_class_definition) 
+            << " Attribute " 
+            << attr->get_name()
+            << " is an attribute of an inherited class.\n";
+        //raise_error();
+    }
+
+    Symbol parent_type_name = current_class->get_parent_name();
+    if (parent_type_name == No_type)
+        return;
+
+    Class_ parent_definition = classtable->inh_graph[parent_type_name];
+    process_attr(parent_definition, attr);
+}
+
+void process_method(Class_ current_class, method_class* original_method, method_class* parent_method) {
+    if (parent_method == nullptr)
+        return;
+
+    Formals original_method_args = original_method->get_formals();
+    Formals parent_method_args = parent_method->get_formals();
+    
+    int original_formal_ix = 0;
+    int parent_formal_ix = 0;
+    
+    if(original_method->get_return_type() != parent_method->get_return_type()) {
+        classtable->semant_error(current_class) 
+            << "In redefined method " 
+            << original_method->get_name() 
+            << ", the return type " 
+            << original_method->get_return_type() 
+            << " differs from the ancestor method return type "
+            << parent_method->get_return_type() 
+            << ".\n";
+    }
+
+    int original_methods_formals = 0;
+    int parent_method_formals = 0;
+
+    while (original_method_args->more(original_methods_formals))
+        original_methods_formals = original_method_args->next(original_methods_formals);
+
+    while (parent_method_args->more(parent_method_formals))
+        parent_method_formals = parent_method_args->next(parent_method_formals);
+
+    if (original_methods_formals != parent_method_formals) {
+        classtable->semant_error(current_class) 
+            << "In redefined method " 
+            << original_method->get_name() 
+            << ", the number of arguments " 
+            << "(" << original_methods_formals << ")"
+            << " differs from the ancestor method's "
+            << "number of arguments "
+            << "(" << parent_method_formals << ")"
+            << ".\n";
+    }
+
+    while (
+        original_method_args->more(original_formal_ix) &&
+        parent_method_args->more(parent_formal_ix)
+    )
+    {
+        Formal original_formal = original_method_args->nth(original_formal_ix);
+        Formal parent_formal = parent_method_args->nth(parent_formal_ix);
+
+        if (original_formal->get_type() != parent_formal->get_type()) {
+            classtable->semant_error(current_class) 
+                << "In redefined method " 
+                << original_method->get_name() 
+                << ", the return type of argument " 
+                << original_formal->get_type() 
+                << " differs from the corresponding ancestor method argument return type "
+                << parent_formal->get_type() 
+                << ".\n";
+        }
+
+        original_formal_ix = original_method_args->next(original_formal_ix);
+        parent_formal_ix = parent_method_args->next(parent_formal_ix);
+    }
+
+    Symbol parent_type_name =current_class->get_parent_name();
+
+    if (parent_type_name == No_type)
+        return;
+
+    Class_ parent_class_definition = classtable->inh_graph[parent_type_name];
+
+    process_method(
+        parent_class_definition, 
+        original_method,
+        get_class_method(
+            parent_type_name, 
+            original_method->get_name()
+        )
+    );
+}
+
+method_class* lookup_method_in_chain(Symbol class_name, Symbol method_name) {  
+    if (class_name == No_type)
+        return nullptr;
+
+    method_class* definition = get_class_method(class_name, method_name);
+    if (definition)
+        return definition;
+
+    Symbol parent_type_name = classtable->inh_graph[class_name]->get_parent_name();
+    return lookup_method_in_chain(parent_type_name, method_name);
+}
+
+method_class* lookup_method(Symbol class_name, Symbol method_name) {  
+    method_class* chain_method = lookup_method_in_chain(class_name, method_name);
+
+    if (chain_method)
+        return chain_method;
+
+    if (classtable->is_primitive(class_name)) 
+    {
+        return get_class_method(class_name, method_name);
+    }
+    return nullptr;
+}
+
+void register_class_and_its_methods(Class_ class_definition) {
+    class_methods[class_definition->get_name()] = get_class_methods(class_definition);
+    class_attrs[class_definition->get_name()] = get_class_attributes(class_definition);
+}
+
+void type_check(Class_ next_class) {
+    current_class_name = next_class->get_name();
+    current_class_definition = next_class;
+    current_class_methods = get_class_methods(next_class);
+    ensure_class_attributes_are_unique(next_class);
+    current_class_attrs = get_class_attributes(next_class);
+
+    Environment->enterscope();
+    Environment->addid(self, new Symbol(current_class_definition->get_name()));
+
+    build_attribute_scopes(next_class);
+    
+    for (const auto &x : current_class_methods) {
+        process_method(next_class, x.second, x.second);
+    }
+
+    for (const auto &x : current_class_attrs) {
+        Symbol parent_type_name = classtable->inh_graph[current_class_name]->get_parent_name();
+        Class_ parent_definition = classtable->inh_graph[parent_type_name];
+        process_attr(parent_definition, x.second);
+    }
+
+    for (const auto &x : current_class_attrs) {
+        x.second->check_type();
+    }
+
+    for (const auto &x : current_class_methods) {
+        x.second->check_type();
+    }
+
+    Environment->exitscope();
+}
 
 Symbol object_class::check_type() {
     if(name == self) {
@@ -559,7 +877,8 @@ Symbol cond_class::check_type() {
 
 //Review these three
 Symbol dispatch_class::check_type() {
-     Symbol expr_type = expr->check_type();
+
+    Symbol expr_type = expr->check_type();
 
     if (expr_type != SELF_TYPE && !classtable->is_type_defined(expr_type)) {
 
@@ -659,48 +978,160 @@ Symbol dispatch_class::check_type() {
 }
 
 Symbol static_dispatch_class::check_type() {
-    Symbol type1 = expr->check_type();
-    if(type1 == SELF_TYPE) {
-        type1 = *Environment->lookup(self);
+    Symbol expr_type = expr->check_type();
+
+    if (this->type_name != SELF_TYPE && !classtable->is_type_defined(type_name)) {
+        classtable->semant_error(this) 
+            << "Static dispatch on undefined class " 
+            << type_name 
+            << ".\n";
+
+        this->set_type(Object);
+        return Object;
     }
-    if(Environment->lookup(type1) == NULL) {
-        classtable->semant_error(this) << "Tipo não declarado: " << type1 << "\n";
+    if (expr_type != SELF_TYPE && !classtable->is_type_defined(expr_type)) {
+        this->set_type(Object);
+        return type;
     }
-    if(Environment->lookup(type1)->lookup(name) == NULL) {
-        classtable->semant_error(this) << "Método não declarado: " << name << "\n";
+
+    bool is_dispatch_valid = true;
+
+    if (!classtable->is_subtype_of(expr_type, this->type_name)) {
+        is_dispatch_valid = true;
+        classtable -> semant_error(this) 
+            << "Expression type " 
+            << expr_type 
+            << " is not compatible with declared static dispatch type " 
+            << this->type_name 
+            <<  ".\n";
     }
-    Symbol type2 = Environment->lookup(type1)->lookup(name);
-    if(type2 == SELF_TYPE) {
-        type = SELF_TYPE;
-    } else {
-        type = type2;
+    
+    method_class* method_definition = lookup_method(type_name, name);
+    if (!method_definition) 
+    {
+        classtable->semant_error(this) 
+            << "Dispatch to undefined method " 
+            << name 
+            << ".\n";
+        
+        this->set_type(Object);
+        return Object;
     }
-    if(type != return_type) {
-        classtable->semant_error(this) << "Tipo de retorno não corresponde ao tipo declarado\n";
+
+    Symbol declared_return_type = method_definition->get_return_type();
+    Formals declared_method_args = method_definition->get_formals();
+    Expressions actual_method_args = this->actual;
+
+    int declared_method_args_count = 0;
+    int actual_method_args_count = 0;
+
+    while (declared_method_args->more(declared_method_args_count))
+        declared_method_args_count = declared_method_args->next(declared_method_args_count);
+    while (actual_method_args->more(actual_method_args_count))
+        actual_method_args_count = actual_method_args->next(actual_method_args_count);
+
+    if (declared_method_args_count != actual_method_args_count) {
+        classtable->semant_error(this) 
+            << "In the dispatch to method " 
+            << method_definition->get_name() 
+            << ", given number of arguments " 
+            << "(" << actual_method_args_count << ")"
+            << " differs from the declared method's "
+            << "number of arguments "
+            << "(" << declared_method_args_count << ")"
+            << ".\n";
     }
-    return type;
+
+    int declared_argument_ix = declared_method_args->first();
+    int actual_argument_ix = actual_method_args->first();
+    Formal declared_argument;
+    Expression actual_argument;
+
+    while (
+        actual_method_args->more(actual_argument_ix) && 
+        declared_method_args->more(declared_argument_ix)
+    )
+    {
+        actual_argument = actual_method_args->nth(actual_argument_ix);
+        declared_argument = declared_method_args->nth(declared_argument_ix);
+
+        Symbol actual_argument_type = actual_argument->check_type();
+        Symbol declared_argument_type = declared_argument->get_type();
+
+        if (!classtable->is_subtype_of(actual_argument_type, declared_argument_type)) {
+            is_dispatch_valid = false;
+
+            classtable->semant_error(this) 
+                << "In the dispatch of the method " 
+                << method_definition->get_name() 
+                << ", type "
+                << actual_argument_type 
+                << " of provided argument " 
+                << declared_argument->get_name() 
+                << " is not compatible with the corresponding signature type " 
+                << declared_argument_type 
+                << " .\n";
+        }
+
+        actual_argument_ix = actual_method_args->next(actual_argument_ix);
+        declared_argument_ix = declared_method_args->next(declared_argument_ix);
+    }
+    
+    if (!is_dispatch_valid)
+    {
+        this->set_type(Object);
+        return Object;
+    }
+
+    Symbol dispatch_type = declared_return_type == SELF_TYPE ? expr_type : declared_return_type;
+    this->set_type(dispatch_type);
+    return dispatch_type;
 }
 
 Symbol assign_class::check_type() {
-    if(name == self) {
-        classtable->semant_error(this) << "Atribuição ao self não é permitida\n";
+    Symbol identifier = name;
+    Expression assign_expr = expr;
+
+    if (identifier == self) {
+        classtable->semant_error(this) << "Cannot assign to 'self'" << ".\n";
+        return Object;
     }
-    if(Environment->lookup(name) == NULL) {
-        classtable->semant_error(this) << "Identificador não declarado: " << name << "\n";
+
+    Symbol* identifier_type = Environment->lookup(identifier);
+
+    if (!identifier_type) {
+        classtable->semant_error(this) 
+            << "Tried to assign undeclared identifier " 
+            << identifier 
+            << ".\n";
+
+        this->set_type(Object);
+        return this->get_type();
     }
-    Symbol type1 = Environment->lookup(name);
-    Symbol type2 = expr->check_type();
-    if(type1 == SELF_TYPE) {
-        type1 = *Environment->lookup(self);
+
+    Symbol assign_expr_type = assign_expr->check_type();
+
+    bool does_assign_conform_declared = classtable->is_subtype_of(
+        assign_expr_type, 
+        *identifier_type
+    );
+
+    if (!does_assign_conform_declared) {
+        classtable->semant_error(this) 
+            << "The identifier " 
+            << identifier 
+            << " has been declared as "
+            << *identifier_type
+            << " but assigned with incompatible type "
+            << assign_expr_type
+            << ".\n";
+
+        this->set_type(Object);
+        return Object;
     }
-    if(type2 == SELF_TYPE) {
-        type2 = *Environment->lookup(self);
-    }
-    if(type1 != type2) {
-        classtable->semant_error(this) << "Tipo de atribuição não corresponde ao tipo declarado\n";
-    }
-    type = type2;
-    return type;
+
+    this->set_type(assign_expr_type);
+    return assign_expr_type;
 }
 
 Symbol branch_class::check_type() {
@@ -736,6 +1167,9 @@ void program_class::semant()
     classtable = new ClassTable(classes);
 
     /* some semantic analysis code may go here */
+    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
+        type_check(classes->nth(i));
+    }
 
     if (classtable->errors()) {
     cerr << "Compilation halted due to static semantic errors." << endl;

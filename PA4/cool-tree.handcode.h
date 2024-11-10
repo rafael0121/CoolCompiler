@@ -86,17 +86,19 @@ Symbol get_name() { return name; }               \
 Formals get_formals() { return formals; }        \
 Symbol get_return_type() { return return_type; } \
 Expression get_expression() { return expr; }     \
-void check_type();
+Symbol check_type();
 
 #define attr_EXTRAS                               \
 bool is_method() { return false; }                \
 bool is_attr() { return true; }                   \
 Symbol get_name() { return name; }                \
 Symbol get_type() { return type_decl; }           \
-Expression get_init_expression() { return init; }
-
+Expression get_init_expression() { return init; } \
+Symbol check_type();
 
 #define Formal_EXTRAS                              \
+virtual Symbol get_type() = 0;           				   \
+virtual Symbol get_name() = 0;             				   \
 virtual void dump_with_types(ostream&,int) = 0;
 
 
