@@ -204,6 +204,12 @@ void ClassTable::install_basic_classes() {
                               Str, 
                               no_expr()))),
            filename);
+
+    inh_graph.insert(std::pair<Symbol, Class_>(Object, Object_class));
+	inh_graph.insert(std::pair<Symbol, Class_>(IO, IO_class));
+	inh_graph.insert(std::pair<Symbol, Class_>(Int, Int_class));
+	inh_graph.insert(std::pair<Symbol, Class_>(Bool, Bool_class));
+	inh_graph.insert(std::pair<Symbol, Class_>(Str, Str_class));
 }
 
 void ClassTable::install_user_classes(Classes classes)
@@ -742,6 +748,105 @@ Symbol bool_const_class::check_type() {
 Symbol int_const_class::check_type() {
     type = Int;
     return type;
+}
+
+Symbol method_class::check_type() {
+    Environment->enterscope();
+    std::set<Symbol> defined_arguments;
+
+    for (int formal_ix = formals->first(); formals->more(formal_ix); formal_ix = formals->next(formal_ix))
+    {
+        Formal argument = formals->nth(formal_ix);
+        Symbol argument_name = argument->get_name();
+        Symbol argument_type = argument->get_type();
+
+        if(argument_name == self)
+            classtable->semant_error(argument) << "'self' cannot be the name of a method argument.\n";
+        else if(defined_arguments.find(argument_name) != defined_arguments.end())
+            classtable->semant_error(argument) 
+                << "The argument " 
+                << argument_name 
+                << " in the signature of method "
+                << get_name()
+                << " has already been defined.\n";
+        else
+        {
+           defined_arguments.insert(argument_name);
+        }
+        
+        if (!classtable->is_type_defined(argument_type))
+            classtable->semant_error(argument) 
+                << "The argument " 
+                << argument_name 
+                << " in the signature of method "
+                << get_name()
+                << " has undefined type "
+                << argument_type
+                << " .\n";
+        else
+            Environment->addid(argument_name, new Symbol(argument_type));
+    }
+
+    Symbol expected_return_type = get_return_type();
+    Symbol actual_return_type = this->expr->check_type();
+
+    if (!classtable->is_subtype_of(actual_return_type, expected_return_type))
+    {
+        classtable->semant_error(this)
+            << "Inferred return type "
+            << actual_return_type << 
+            " of the method " 
+            << this->get_name() 
+            << " is not compatible with declared return type " 
+            << expected_return_type 
+            << ".\n";
+    }
+    
+    Environment->exitscope();
+    return this->get_return_type();
+}
+
+Symbol attr_class::check_type() {
+    Expression init_expr = this->get_init_expression();
+    Symbol init_expr_type = init_expr->check_type();
+    init_expr_type = init_expr_type == SELF_TYPE ? current_class_name : init_expr_type;
+    
+    if (dynamic_cast<const no_expr_class*>(init_expr) != nullptr)
+        return this->get_type();
+
+    if (this->get_name() == self) {
+        classtable->semant_error(this) << "'self' cannot be the name of an attribute.\n";
+        return this->get_type();
+    }
+    
+    if (!classtable->is_type_defined(this->get_type())) {
+        classtable->semant_error(init_expr)
+            << "The attribute "
+            << this->get_name()
+            << " is defined as "
+            << this->get_type()
+            << " but type "
+            << this->get_type()
+            << " is undefined. \n";
+        return this->get_type();
+    }
+
+    bool does_init_type_match_defined_type = classtable->is_subtype_of(
+        init_expr_type,
+        this->get_type()
+    );
+
+    if(!does_init_type_match_defined_type) {
+        classtable->semant_error(init_expr)
+            << "The attribute "
+            << this->get_name()
+            << " is defined as "
+            << this->get_type()
+            << " but is initialized with "
+            << init_expr_type
+            << ".\n";
+    }
+    return this->get_type();
 }
 
 Symbol comp_class::check_type() {
