@@ -8,6 +8,7 @@
 #include "symtab.h"
 #include "list.h"
 #include <map>
+#include <set>
 
 #define TRUE 1
 #define FALSE 0
@@ -38,9 +39,13 @@ public:
   ostream& semant_error(tree_node *t);
 
   std::map<Symbol, Class_> inh_graph;
-  bool is_type_defined(Symbol);
-
+  SymbolTable<Symbol, Symbol> *object_table;
+  SymbolTable<Symbol, Symbol> *method_table;
   Symbol lub(Symbol, Symbol);
+
+  bool is_subtype_of(Symbol, Symbol);
+  bool is_type_defined(Symbol);
+  bool is_primitive(Symbol);
 };
 
 
