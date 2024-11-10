@@ -335,6 +335,19 @@ bool ClassTable::check_parents_and_inheritance() {
     }
 }
 
+bool ClassTable::is_type_defined(Symbol name) {
+
+    std::map<Symbol, Class_>::iterator it;
+
+    it  = inh_graph.find(name);
+
+    if (it != inh_graph.end()){
+        return true;
+    }
+
+    return false;
+}
+
 
 //=================================================================================
 // Semant Error
@@ -557,7 +570,6 @@ Symbol cond_class::check_type() {
     return type;
 }
 
-//Review these three
 Symbol dispatch_class::check_type() {
      Symbol expr_type = expr->check_type();
 
@@ -658,6 +670,7 @@ Symbol dispatch_class::check_type() {
     return dispatch_type;
 }
 
+/*
 Symbol static_dispatch_class::check_type() {
     Symbol type1 = expr->check_type();
     if(type1 == SELF_TYPE) {
@@ -710,6 +723,8 @@ Symbol branch_class::check_type() {
     Environment->exitscope();
     return type;
 }
+
+*/
 
 //=================================================================================
 // Semant Main

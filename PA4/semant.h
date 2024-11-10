@@ -38,6 +38,8 @@ public:
   ostream& semant_error(tree_node *t);
 
   std::map<Symbol, Class_> inh_graph;
+  bool is_type_defined(Symbol);
+
   Symbol lub(Symbol, Symbol);
 };
 

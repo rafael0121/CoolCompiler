@@ -97,6 +97,7 @@ Expression get_init_expression() { return init; }
 
 
 #define Formal_EXTRAS                              \
+Symbol get_type() { return type_decl; }           \
 virtual void dump_with_types(ostream&,int) = 0;
 
 
