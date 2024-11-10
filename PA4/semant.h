@@ -7,6 +7,7 @@
 #include "stringtab.h"
 #include "symtab.h"
 #include "list.h"
+#include <map>
 
 #define TRUE 1
 #define FALSE 0
@@ -25,7 +26,7 @@ private:
   void install_basic_classes();
   void install_user_classes(Classes);
   void build_inheritance_graph(Classes);
-  void check_inheritance(Classes);
+  bool check_parents_and_inheritance();
   ostream& error_stream;
 
 public:
@@ -36,6 +37,7 @@ public:
   ostream& semant_error(Symbol filename, tree_node *t);
   ostream& semant_error(tree_node *t);
 
+  std::map<Symbol, Class_> inh_graph;
   Symbol lub(Symbol, Symbol);
 };
 

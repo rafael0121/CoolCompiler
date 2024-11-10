@@ -95,7 +95,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
     install_basic_classes();
     install_user_classes(classes);
     build_inheritance_graph(classes);
-    check_inheritance(classes);
+    check_parents_and_inheritance();
 }
 
 void ClassTable::install_basic_classes() {
@@ -123,14 +123,14 @@ void ClassTable::install_basic_classes() {
     // are already built in to the runtime system.
 
     Class_ Object_class =
-	class_(Object, 
-	       No_class,
-	       append_Features(
-			       append_Features(
-					       single_Features(method(cool_abort, nil_Formals(), Object, no_expr())),
-					       single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
-			       single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
-	       filename);
+    class_(Object, 
+           No_class,
+           append_Features(
+                   append_Features(
+                           single_Features(method(cool_abort, nil_Formals(), Object, no_expr())),
+                           single_Features(method(type_name, nil_Formals(), Str, no_expr()))),
+                   single_Features(method(copy, nil_Formals(), SELF_TYPE, no_expr()))),
+           filename);
 
     // 
     // The IO class inherits from Object. Its methods are
@@ -140,34 +140,34 @@ void ClassTable::install_basic_classes() {
     //        in_int() : Int                      "   an int     "  "     "
     //
     Class_ IO_class = 
-	class_(IO, 
-	       Object,
-	       append_Features(
-			       append_Features(
-					       append_Features(
-							       single_Features(method(out_string, single_Formals(formal(arg, Str)),
-										      SELF_TYPE, no_expr())),
-							       single_Features(method(out_int, single_Formals(formal(arg, Int)),
-										      SELF_TYPE, no_expr()))),
-					       single_Features(method(in_string, nil_Formals(), Str, no_expr()))),
-			       single_Features(method(in_int, nil_Formals(), Int, no_expr()))),
-	       filename);  
+    class_(IO, 
+           Object,
+           append_Features(
+                   append_Features(
+                           append_Features(
+                                   single_Features(method(out_string, single_Formals(formal(arg, Str)),
+                                              SELF_TYPE, no_expr())),
+                                   single_Features(method(out_int, single_Formals(formal(arg, Int)),
+                                              SELF_TYPE, no_expr()))),
+                           single_Features(method(in_string, nil_Formals(), Str, no_expr()))),
+                   single_Features(method(in_int, nil_Formals(), Int, no_expr()))),
+           filename);  
 
     //
     // The Int class has no methods and only a single attribute, the
     // "val" for the integer. 
     //
     Class_ Int_class =
-	class_(Int, 
-	       Object,
-	       single_Features(attr(val, prim_slot, no_expr())),
-	       filename);
+    class_(Int, 
+           Object,
+           single_Features(attr(val, prim_slot, no_expr())),
+           filename);
 
     //
     // Bool also has only the "val" slot.
     //
     Class_ Bool_class =
-	class_(Bool, Object, single_Features(attr(val, prim_slot, no_expr())),filename);
+    class_(Bool, Object, single_Features(attr(val, prim_slot, no_expr())),filename);
 
     //
     // The class Str has a number of slots and operations:
@@ -178,25 +178,25 @@ void ClassTable::install_basic_classes() {
     //       substr(arg: Int, arg2: Int): Str     substring selection
     //       
     Class_ Str_class =
-	class_(Str, 
-	       Object,
-	       append_Features(
-			       append_Features(
-					       append_Features(
-							       append_Features(
-									       single_Features(attr(val, Int, no_expr())),
-									       single_Features(attr(str_field, prim_slot, no_expr()))),
-							       single_Features(method(length, nil_Formals(), Int, no_expr()))),
-					       single_Features(method(concat, 
-								      single_Formals(formal(arg, Str)),
-								      Str, 
-								      no_expr()))),
-			       single_Features(method(substr, 
-						      append_Formals(single_Formals(formal(arg, Int)), 
-								     single_Formals(formal(arg2, Int))),
-						      Str, 
-						      no_expr()))),
-	       filename);
+    class_(Str, 
+           Object,
+           append_Features(
+                   append_Features(
+                           append_Features(
+                                   append_Features(
+                                           single_Features(attr(val, Int, no_expr())),
+                                           single_Features(attr(str_field, prim_slot, no_expr()))),
+                                   single_Features(method(length, nil_Formals(), Int, no_expr()))),
+                           single_Features(method(concat, 
+                                      single_Formals(formal(arg, Str)),
+                                      Str, 
+                                      no_expr()))),
+                   single_Features(method(substr, 
+                              append_Formals(single_Formals(formal(arg, Int)), 
+                                     single_Formals(formal(arg2, Int))),
+                              Str, 
+                              no_expr()))),
+           filename);
 }
 
 void ClassTable::install_user_classes(Classes classes)
@@ -211,32 +211,6 @@ void ClassTable::install_user_classes(Classes classes)
             semant_error(c) << "Classe já declarada: " << name << "\n";
         } else {
             Environment->addid(name, new Symbol(parent));
-        }
-    }
-}
-
-void ClassTable::check_inheritance(Classes classes)
-{
-    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        Symbol class_parent = classes->nth(i)->get_parent_name();
-        if (class_parent != Object && Environment->lookup(class_parent) != NULL){
-            semant_error(classes->nth(i)) << "Classe " << Environment->lookup(name) << " herdada não definida " << Environment->lookup(class_parent) << ".\n";
-        }
-    }
-    
-    for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
-        if (it->first == Object) continue;
-        curr_class = it->second;
-        Symbol cname = it->first;
-        Symbol pname = it->second->getParentName();
-        while (pname != Object) {
-            if (pname == cname) {
-                semant_error(curr_class) << "Class " << curr_class->getName() << ", or an ancestor of " << curr_class->getName() << ", is involved in an inheritance cycle.\n";
-                break;
-            }
-            if (classTable.find(pname) == classTable.end())
-                break;
-            pname = classTable[pname]->getParentName();
         }
     }
 }
@@ -283,6 +257,89 @@ Symbol ClassTable::lub(Symbol l1, Symbol l2){
 //
 ///////////////////////////////////////////////////////////////////
 
+//=================================================================================
+// Inheriteance
+//=================================================================================
+
+void ClassTable::build_inheritance_graph(Classes classes) {
+    bool main_class_not_defined_error = false;
+    bool class_redefinition_error = false;
+    for(int i=classes->first(); classes->more(i); i=classes->next(i)) {
+        Class_ cur_class=classes->nth(i);
+        
+        // Check if is Main class
+        if(cur_class->get_name()==Main)
+            main_class_not_defined_error = false;
+        
+        // Check class redefinition
+        if(cur_class->get_name()==SELF_TYPE || inh_graph.find(cur_class->get_name())!=inh_graph.end()) {
+            if(cur_class->get_name()==IO || cur_class->get_name()==Int || cur_class->get_name()==Str || cur_class->get_name()==Bool || cur_class->get_name()==Object || cur_class->get_name()==SELF_TYPE)
+                semant_error(cur_class)<<"Basic Class Redefinition "<<cur_class->get_name()<<"."<<endl;
+            else
+                semant_error(cur_class)<<"Class "<<(cur_class->get_name())<<" was previously defined."<<endl;
+            class_redefinition_error=true;
+        } else
+            inh_graph.insert(std::pair<Symbol, Class_>(cur_class->get_name(), cur_class));
+    }
+    
+    if(!class_redefinition_error)
+        if(check_parents_and_inheritance())
+            if(main_class_not_defined_error)
+                semant_error()<<"Class Main is not defined."<<endl;
+}
+
+bool ClassTable::check_parents_and_inheritance() {
+    
+    bool error_parents=false;
+    bool error_inhe=false;
+    for(std::map<Symbol, Class_>::iterator it=inh_graph.begin(); it!=inh_graph.end(); it++) {
+
+        // Check valid partents
+        Symbol child_class_symbol=it->first, parent_class_symbol=it->second->get_parent_name();
+        if(child_class_symbol==Object)
+            continue;
+        
+        //check if parent is defined
+        if(inh_graph.find(parent_class_symbol)==inh_graph.end()) {
+            semant_error(it->second)<<"Class "<<child_class_symbol<<" inherits from an undefined class "<<parent_class_symbol<<"."<<endl;
+            error_parents=true;
+        }
+        
+        //check if inheritance from Int, String or Bool
+        if(parent_class_symbol==Int || parent_class_symbol==Str || parent_class_symbol==Bool) {
+            semant_error(it->second)<<"Class "<<child_class_symbol<<" cannot inherit class "<<parent_class_symbol<<"."<<endl;
+            error_parents=true;
+        }
+
+        // Check inheritence cycles.
+        Symbol cur_class, slow_class_ref, fast_class_ref;
+        cur_class=slow_class_ref=fast_class_ref=it->first;
+        
+        while(slow_class_ref!=Object && fast_class_ref!=Object && inh_graph[fast_class_ref]->get_parent_name()!=Object) {
+            slow_class_ref=inh_graph[slow_class_ref]->get_parent_name();
+            fast_class_ref=inh_graph[inh_graph[fast_class_ref]->get_parent_name()]->get_parent_name();
+            
+            //if loop is found
+            if(slow_class_ref==fast_class_ref) {
+                semant_error(inh_graph[cur_class])<<"Class "<<cur_class<<", or an ancestor of "<<cur_class<<", is involved in an inheritance cycle."<<endl;
+                error_inhe=true;
+                break;
+            }
+        }
+    }
+
+    if (error_inhe || error_parents) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+
+//=================================================================================
+// Semant Error
+//=================================================================================
+
 ostream& ClassTable::semant_error(Class_ c)
 {                                                             
     return semant_error(c->get_filename(),c);
@@ -304,6 +361,10 @@ ostream& ClassTable::semant_error()
     semant_errors++;                            
     return error_stream;
 } 
+
+//=================================================================================
+// Check Types
+//=================================================================================
 
 Symbol object_class::check_type() {
     if(name == self) {
@@ -650,6 +711,10 @@ Symbol branch_class::check_type() {
     return type;
 }
 
+//=================================================================================
+// Semant Main
+//=================================================================================
+
 /*   This is the entry point to the semantic checker.
 
      Your checker should do the following two things:
@@ -673,7 +738,7 @@ void program_class::semant()
     /* some semantic analysis code may go here */
 
     if (classtable->errors()) {
-	cerr << "Compilation halted due to static semantic errors." << endl;
-	exit(1);
+    cerr << "Compilation halted due to static semantic errors." << endl;
+    exit(1);
     }
 }
