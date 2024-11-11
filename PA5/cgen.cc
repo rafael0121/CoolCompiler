@@ -637,7 +637,7 @@ void CgenClassTable::install_basic_classes()
 {
 
 // The tree package uses these globals to annotate the classes built below.
-  curr_lineno  = 0;
+  //curr_lineno  = 0;
   Symbol filename = stringtable.add_string("<basic class>");
 
 //
