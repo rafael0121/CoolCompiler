@@ -181,17 +181,30 @@ Instructions
 Write-up for PA4
 ----------------
 
-The first step on creating our semantic analyser is to implement new methods and functions to the classes that will compose our Abstract Syntax Tree.
-In order to do this we implemented fucntions such as get_type, get_name and check_type, to name a few, in the definitions on cool-tree.handcode.h.
+Due to the nature of this task in particular, it was very hard to implement the semantic analyzer, being able to implement it in different manners
+without a "correct" solution or a linear path to solve this, therefore we resorted to studying implementations of semantic analyzers.
+
+The first step in creating our semantic analyzer is to implement new methods and functions to the classes that will compose our Abstract Syntax Tree,
+because we need to extract the information stored in them to be processed in the analyzer.
+In order to do this we implemented functions such as get_type, get_name, and check_type, to name a few, in the definitions on cool-tree.handcode.h.
 
 Next, we worked on the first pass of the program, which is responsible for listing every class that was found and adding it to the class table.
-The code came with the implementation of the basic classes, such as Object, Int and String, after instantiating the class table the function
-containing the installation of these classes is called in its constructor, we also used it as a template to create the installation of the user classes.
-Another important step we do in the first pass is to create and evaluate the inheritance graph, this is important to ensure that every class being used
-is defined, and that there are no cycles in the inheritance graph.
-To do this we created two functions for the ClassTable class, one that creates the graph and another that evaluates it, both of them are called in the
-constructor of the ClassTable class.
-After finishing the implementations we add it to the ClassTable class, in semant.h, we also create a new type of error stream, that receives only
+The code came with the implementation of the basic classes, such as Object, Int, and String, after instantiating the class table the function
+containing the installation of these classes is called in its constructor. Another important step we do in the first pass is to create and evaluate
+the inheritance graph, this is important to ensure that every class being used is defined and that there are no cycles in the inheritance graph.
+
+We also created new mappings that track the methods and attributes of the classes and evaluate them before moving on to the type-checking stage,
+this is done to treat new classes that are defined by the user.
+
+After finishing the implementations we add them to the ClassTable class, in semant.h, we also create a new type of error stream, that receives only
 the tree node, making it easier to catch errors in methods that don't have a Symbol variable.
 
-The second pass of the program is responsible for checking the types of the expressions and methods, we implemented this in the semant.cc file.
+The second pass of the program is responsible for checking the types of the expressions, we implemented a main function called type_check() that iterates
+through the program and, as it finds methods, attributes, and features, calls the type_check() function of the respective class in the node and evaluates if the
+parameters regarding the operation are valid or not.
+
+In order to test the efficacy of our analyzer we ran tests with the example codes found in /var/tmp/cool/examples and used the codes developed by us in PA1.
+
+Students:
+Rafael Ramos de Andrade
+Victor Gabriel Mendes Sundermann
