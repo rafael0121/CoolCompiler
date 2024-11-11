@@ -203,8 +203,6 @@ The second pass of the program is responsible for checking the types of the expr
 through the program and, as it finds methods, attributes, and features, calls the type_check() function of the respective class in the node and evaluates if the
 parameters regarding the operation are valid or not.
 
-In order to test the efficacy of our analyzer we ran tests with the example codes found in /var/tmp/cool/examples and used the codes developed by us in PA1.
-
 Students:
 Rafael Ramos de Andrade
 Victor Gabriel Mendes Sundermann
