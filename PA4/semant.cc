@@ -101,9 +101,7 @@ ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) 
 
     /* Fill this in */
     install_basic_classes();
-    cout << "Installed basic" << endl;
     build_inheritance_graph(classes);
-    cout << "Built Inheritance" << endl;
 }
 
 void ClassTable::install_basic_classes() {
@@ -263,17 +261,18 @@ void ClassTable::build_inheritance_graph(Classes classes) {
     bool class_redefinition_error = false;
     for(int i=classes->first(); classes->more(i); i=classes->next(i)) {
         Class_ cur_class=classes->nth(i);
-        
+
+
         // Check if is Main class
         if(cur_class->get_name()==Main)
             main_class_not_defined_error = false;
-        
+
         // Check class redefinition
         if(cur_class->get_name()==SELF_TYPE || inh_graph.find(cur_class->get_name())!=inh_graph.end()) {
             if(cur_class->get_name()==IO || cur_class->get_name()==Int || cur_class->get_name()==Str || cur_class->get_name()==Bool || cur_class->get_name()==Object || cur_class->get_name()==SELF_TYPE)
-                semant_error(cur_class)<<"Basic Class Redefinition "<<cur_class->get_name()<<"."<<endl;
+                semant_error(cur_class)<<"Redefinição de classe básica "<<cur_class->get_name()<<"."<<endl;
             else
-                semant_error(cur_class)<<"Class "<<(cur_class->get_name())<<" was previously defined."<<endl;
+                semant_error(cur_class)<<"Classe "<<(cur_class->get_name())<<" foi previamente definida."<<endl;
             class_redefinition_error=true;
         } else
             inh_graph.insert(std::pair<Symbol, Class_>(cur_class->get_name(), cur_class));
@@ -282,7 +281,7 @@ void ClassTable::build_inheritance_graph(Classes classes) {
     if(!class_redefinition_error)
         if(check_parents_and_inheritance())
             if(main_class_not_defined_error)
-                semant_error()<<"Class Main is not defined."<<endl;
+                semant_error()<<"Classe Main não definida."<<endl;
 }
 
 bool ClassTable::check_parents_and_inheritance() {
@@ -291,20 +290,22 @@ bool ClassTable::check_parents_and_inheritance() {
     bool error_inhe=false;
     for(std::map<Symbol, Class_>::iterator it=inh_graph.begin(); it!=inh_graph.end(); it++) {
 
-        // Check valid partents
-        Symbol child_class_symbol=it->first, parent_class_symbol=it->second->get_parent_name();
+        // Check valid parents
+        Symbol child_class_symbol = it->first, parent_class_symbol = it->second->get_parent_name();
         if(child_class_symbol==Object)
             continue;
         
         //check if parent is defined
         if(inh_graph.find(parent_class_symbol)==inh_graph.end()) {
-            semant_error(it->second)<<"Class "<<child_class_symbol<<" inherits from an undefined class "<<parent_class_symbol<<"."<<endl;
+            semant_error(it->second)<<"Class "<<child_class_symbol<<" herda de uma classe indefinida "<<parent_class_symbol<<"."<<endl;
             error_parents=true;
         }
-        
+
+        parent_type_of[child_class_symbol] = parent_class_symbol;
+
         //check if inheritance from Int, String or Bool
         if(parent_class_symbol==Int || parent_class_symbol==Str || parent_class_symbol==Bool) {
-            semant_error(it->second)<<"Class "<<child_class_symbol<<" cannot inherit class "<<parent_class_symbol<<"."<<endl;
+            semant_error(it->second)<<"Classe "<<child_class_symbol<<" não pode herdar a classe "<<parent_class_symbol<<"."<<endl;
             error_parents=true;
         }
 
@@ -318,11 +319,12 @@ bool ClassTable::check_parents_and_inheritance() {
             
             //if loop is found
             if(slow_class_ref==fast_class_ref) {
-                semant_error(inh_graph[cur_class])<<"Class "<<cur_class<<", or an ancestor of "<<cur_class<<", is involved in an inheritance cycle."<<endl;
+                semant_error(inh_graph[cur_class])<<"Classe "<<cur_class<<", ou um ancestral de "<<cur_class<<", estão em um ciclo de heranças."<<endl;
                 error_inhe=true;
                 break;
             }
         }
+
     }
 
     if (error_inhe || error_parents) {
@@ -344,6 +346,15 @@ bool ClassTable::is_type_defined(Symbol name) {
 
     return false;
 }
+
+Symbol ClassTable::get_parent_type_of(Symbol symbol) {
+    if (this->parent_type_of.find(symbol) == this->parent_type_of.end())
+        return No_type;
+
+    return parent_type_of[symbol];
+}
+
+
 
 //=================================================================================
 // Semant Error
@@ -393,9 +404,9 @@ std::map<Symbol, method_class*> get_class_methods(Class_ class_definition) {
         if (class_methods.find(method_name) != class_methods.end())
         {
             ostream& error_stream = classtable->semant_error(class_definition);
-            error_stream << "The method :";
+            error_stream << "O método :";
             method_name->print(error_stream);
-            error_stream << " has already been defined!\n";
+            error_stream << " já foi definido!\n";
         }
         else
         {
@@ -416,16 +427,11 @@ method_class* get_class_method(Symbol class_name, Symbol method_name) {
 
 attr_class* get_class_attr(Symbol class_name, Symbol attr_name) {
     
-    cout << "Entered get class" << endl;
     std::map<Symbol, attr_class*> attrs = class_attrs[class_name];
     
     if (attrs.find(attr_name) == attrs.end()){
-        cout << "Nullptr" << endl;
         return nullptr;
     }
-        
-
-    cout << "Exiting" << endl;
 
     return attrs[attr_name];
 }
@@ -448,9 +454,9 @@ void ensure_class_attributes_are_unique(Class_ class_definition) {
         if (class_attrs.find(attr_name) != class_attrs.end())
         {
             classtable->semant_error(class_definition)
-                << "The attribute :"
+                << "O atributo :"
                 << attr_name
-                << " has already been defined!\n";
+                << " ja foi definido!\n";
         }
         class_attrs.insert(attr_name);
     }
@@ -528,24 +534,17 @@ void build_attribute_scopes(Class_ current_class) {
 }
 
 void process_attr(Class_ current_class, attr_class* attr) {
-    cout << "Entered process attr" << endl;
     if (get_class_attr(current_class->get_name(), attr->get_name()) != nullptr)
     {
-        cout << "1" << endl;
-        classtable->semant_error(current_class_definition) << " Attribute " << attr->get_name() << " is an attribute of an inherited class.\n";
-        cout << "2" << endl;
-        cerr << "Compilation halted due to static semantic errors." << endl;
-        cout << "3" << endl;
+        classtable->semant_error(current_class_definition) << " Atributo " << attr->get_name() << " é um atributo de uma classe herdada.\n";
+        cerr << "Falha na copilação devido a um erro estático de compilação." << endl;
         exit(1);
     }
-    Symbol parent_type_name = current_class->get_parent_name();
+    Symbol parent_type_name = classtable->get_parent_type_of(current_class->get_name());
     if (parent_type_name == No_type)
         return;
-    cout << "Still here" << endl;
     Class_ parent_definition = classtable->inh_graph[parent_type_name];
-    cout << "here" << endl;
     process_attr(parent_definition, attr);
-    cout << "out" << endl;
 }
 
 void process_method(Class_ current_class, method_class* original_method, method_class* parent_method) {
@@ -559,14 +558,8 @@ void process_method(Class_ current_class, method_class* original_method, method_
     int parent_formal_ix = 0;
     
     if(original_method->get_return_type() != parent_method->get_return_type()) {
-        classtable->semant_error(current_class) 
-            << "In redefined method " 
-            << original_method->get_name() 
-            << ", the return type " 
-            << original_method->get_return_type() 
-            << " differs from the ancestor method return type "
-            << parent_method->get_return_type() 
-            << ".\n";
+        classtable->semant_error(current_class) << "Na redefinição do método " << original_method->get_name() << ", o tipode retorno " <<
+            original_method->get_return_type() << " difere do tipo de retorn do ancestral "<< parent_method->get_return_type() << ".\n";
     }
 
     int original_methods_formals = 0;
@@ -580,14 +573,9 @@ void process_method(Class_ current_class, method_class* original_method, method_
 
     if (original_methods_formals != parent_method_formals) {
         classtable->semant_error(current_class) 
-            << "In redefined method " 
-            << original_method->get_name() 
-            << ", the number of arguments " 
-            << "(" << original_methods_formals << ")"
-            << " differs from the ancestor method's "
-            << "number of arguments "
-            << "(" << parent_method_formals << ")"
-            << ".\n";
+            << "Na redefinição do método " << original_method->get_name() << ", o número de argumentos " 
+            << "(" << original_methods_formals << ")" << " difere do método ancestral "
+            << "número de argumentso " << "(" << parent_method_formals << ")" << ".\n";
     }
 
     while (
@@ -600,12 +588,8 @@ void process_method(Class_ current_class, method_class* original_method, method_
 
         if (original_formal->get_type() != parent_formal->get_type()) {
             classtable->semant_error(current_class) 
-                << "In redefined method " 
-                << original_method->get_name() 
-                << ", the return type of argument " 
-                << original_formal->get_type() 
-                << " differs from the corresponding ancestor method argument return type "
-                << parent_formal->get_type() 
+                << "Na redefinição do método " << original_method->get_name() << ", o tipo de retorno do argumento " << original_formal->get_type()
+                << " difere do tipo de retorno do metódo ancestral correspondente "<< parent_formal->get_type() 
                 << ".\n";
         }
 
@@ -638,7 +622,8 @@ method_class* lookup_method_in_chain(Symbol class_name, Symbol method_name) {
     if (definition)
         return definition;
 
-    Symbol parent_type_name = classtable->inh_graph[class_name]->get_parent_name();
+    Symbol parent_type_name = classtable->get_parent_type_of(class_name);
+
     return lookup_method_in_chain(parent_type_name, method_name);
 }
 
@@ -661,39 +646,31 @@ void register_class_and_its_methods(Class_ class_definition) {
 }
 
 void type_check(Class_ next_class) {
-    cout << "Started typecheck" << endl;
     current_class_name = next_class->get_name();
     current_class_definition = next_class;
     current_class_methods = get_class_methods(next_class);
     ensure_class_attributes_are_unique(next_class);
     current_class_attrs = get_class_attributes(next_class);
 
-    cout << "Environment" << endl;
     Environment->enterscope();
     Environment->addid(self, new Symbol(current_class_definition->get_name()));
 
-    cout << "Built attr scopes" << endl;
     build_attribute_scopes(next_class);
     
-    cout << "Curr class methods" << endl;
     for (const auto &x : current_class_methods) {
         process_method(next_class, x.second, x.second);
     }
 
-    cout << "Curr class attrs" << endl;
     for (const auto &x : current_class_attrs) {
         Symbol parent_type_name = classtable->inh_graph[current_class_name]->get_parent_name();
         Class_ parent_definition = classtable->inh_graph[parent_type_name];
-        cout << "Curr class attrs proc" << endl;
         process_attr(parent_definition, x.second);
     }
 
-    cout << "Curr class attr check" << endl;
     for (const auto &x : current_class_attrs) {
         x.second->check_type();
     }
 
-    cout << "Curr class methods check" << endl;
     for (const auto &x : current_class_methods) {
         x.second->check_type();
     }
@@ -728,7 +705,7 @@ Symbol isvoid_class::check_type() {
 Symbol new__class::check_type() {
     if(type_name == SELF_TYPE) {
         type = SELF_TYPE;
-    } else if(Environment->lookup(type_name) != NULL) {
+    } else if(classtable->is_type_defined(type_name)) {
         type = type_name;
     } else {
         classtable->semant_error(type_name, this) << "Tipo não declarado: " << type_name << "\n";
@@ -763,14 +740,9 @@ Symbol method_class::check_type() {
         Symbol argument_type = argument->get_type();
 
         if(argument_name == self)
-            classtable->semant_error(argument) << "'self' cannot be the name of a method argument.\n";
+            classtable->semant_error(argument) << "'self' não pode ser o nome de um argumento.\n";
         else if(defined_arguments.find(argument_name) != defined_arguments.end())
-            classtable->semant_error(argument) 
-                << "The argument " 
-                << argument_name 
-                << " in the signature of method "
-                << get_name()
-                << " has already been defined.\n";
+            classtable->semant_error(argument) << "O argumento "  << argument_name << " no método " << get_name() << " já foi definido.\n";
         else
         {
            defined_arguments.insert(argument_name);
@@ -778,13 +750,7 @@ Symbol method_class::check_type() {
         
         if (!classtable->is_type_defined(argument_type))
             classtable->semant_error(argument) 
-                << "The argument " 
-                << argument_name 
-                << " in the signature of method "
-                << get_name()
-                << " has undefined type "
-                << argument_type
-                << " .\n";
+                << "O argumento " << argument_name << " no método " << get_name() << " tem um tipo indefinido " << argument_type << " .\n";
         else
             Environment->addid(argument_name, new Symbol(argument_type));
     }
@@ -794,17 +760,11 @@ Symbol method_class::check_type() {
 
     if (!classtable->is_subtype_of(actual_return_type, expected_return_type))
     {
-        classtable->semant_error(this)
-            << "Inferred return type "
-            << actual_return_type << 
-            " of the method " 
-            << this->get_name() 
-            << " is not compatible with declared return type " 
-            << expected_return_type 
-            << ".\n";
+        classtable->semant_error(this) << "Tipo de retorno inferido " << actual_return_type << " do método " << this->get_name() << " não é compativel com o retorno esperado " << expected_return_type << ".\n";
     }
     
     Environment->exitscope();
+
     return this->get_return_type();
 }
 
@@ -817,19 +777,12 @@ Symbol attr_class::check_type() {
         return this->get_type();
 
     if (this->get_name() == self) {
-        classtable->semant_error(this) << "'self' cannot be the name of an attribute.\n";
+        classtable->semant_error(this) << "'self' não pode ser o nome de uma atributo.\n";
         return this->get_type();
     }
     
     if (!classtable->is_type_defined(this->get_type())) {
-        classtable->semant_error(init_expr)
-            << "The attribute "
-            << this->get_name()
-            << " is defined as "
-            << this->get_type()
-            << " but type "
-            << this->get_type()
-            << " is undefined. \n";
+        classtable->semant_error(init_expr) << "O atributo " << this->get_name() << " é definido como " << this->get_type() << " mas seu tipo " << this->get_type() << " é indefinido. \n";
         return this->get_type();
     }
 
@@ -839,14 +792,7 @@ Symbol attr_class::check_type() {
     );
 
     if(!does_init_type_match_defined_type) {
-        classtable->semant_error(init_expr)
-            << "The attribute "
-            << this->get_name()
-            << " is defined as "
-            << this->get_type()
-            << " but is initialized with "
-            << init_expr_type
-            << ".\n";
+        classtable->semant_error(init_expr) << "O atributo " << this->get_name() << " é definido como " << this->get_type() << " mas é inicializado como " << init_expr_type << ".\n";
     }
     return this->get_type();
 }
@@ -997,10 +943,7 @@ Symbol dispatch_class::check_type() {
 
     if (expr_type != SELF_TYPE && !classtable->is_type_defined(expr_type)) {
 
-        classtable->semant_error(this) 
-            << "Dispatch on undefined class " 
-            << expr_type 
-            << ".\n";
+        classtable->semant_error(this) << "Dispatch em uma classe indefinida " << expr_type << ".\n";
 
         this->set_type(Object);
         return type;
@@ -1011,10 +954,7 @@ Symbol dispatch_class::check_type() {
   
     if (!method_definition) 
     {
-        classtable->semant_error(this) 
-            << "Dispatch to undefined method " 
-            << name 
-            << ".\n";
+        classtable->semant_error(this) << "Dispatch em um método indefinido " << name << ".\n";
         
         this->set_type(Object);
         return Object;
@@ -1033,15 +973,8 @@ Symbol dispatch_class::check_type() {
         actual_method_args_count = actual_method_args->next(actual_method_args_count);
 
     if (declared_method_args_count != actual_method_args_count) {
-        classtable->semant_error(this) 
-            << "In the dispatch to method " 
-            << method_definition->get_name() 
-            << ", given number of arguments " 
-            << "(" << actual_method_args_count << ")"
-            << " differs from the declared method's "
-            << "number of arguments "
-            << "(" << declared_method_args_count << ")"
-            << ".\n";
+        classtable->semant_error(this) << "No dispatch para o método " << method_definition->get_name()  << ", dado o número de argumentos " 
+            << "(" << actual_method_args_count << ")" << " difere do número de argumentos do método " << "(" << declared_method_args_count << ")" << ".\n";
     }
 
     int declared_argument_ix = declared_method_args->first();
@@ -1066,13 +999,13 @@ Symbol dispatch_class::check_type() {
             is_dispatch_valid = false;
 
             classtable->semant_error(this) 
-                << "In the dispatch of the method " 
+                << "No dispatch do método " 
                 << method_definition->get_name() 
-                << ", type "
+                << ", tipo "
                 << actual_argument_type 
-                << " of provided argument " 
+                << " do argumento dado" 
                 << declared_argument->get_name() 
-                << " is not compatible with the corresponding signature type " 
+                << " não é compatível com o tipo correspondente " 
                 << declared_argument_type 
                 << " .\n";
         }
@@ -1089,6 +1022,8 @@ Symbol dispatch_class::check_type() {
 
     Symbol dispatch_type = declared_return_type == SELF_TYPE ? expr_type : declared_return_type;
     this->set_type(dispatch_type);
+
+
     return dispatch_type;
 }
 
@@ -1096,10 +1031,7 @@ Symbol static_dispatch_class::check_type() {
     Symbol expr_type = expr->check_type();
 
     if (this->type_name != SELF_TYPE && !classtable->is_type_defined(type_name)) {
-        classtable->semant_error(this) 
-            << "Static dispatch on undefined class " 
-            << type_name 
-            << ".\n";
+        classtable->semant_error(this) << "Dispatch estático em uma classe indefinida" << type_name << ".\n";
 
         this->set_type(Object);
         return Object;
@@ -1114,20 +1046,13 @@ Symbol static_dispatch_class::check_type() {
     if (!classtable->is_subtype_of(expr_type, this->type_name)) {
         is_dispatch_valid = true;
         classtable -> semant_error(this) 
-            << "Expression type " 
-            << expr_type 
-            << " is not compatible with declared static dispatch type " 
-            << this->type_name 
-            <<  ".\n";
+            << "Tipo da expressão " << expr_type << " não é compatível com o tipo declarado no dispatch estático " << this->type_name <<  ".\n";
     }
     
     method_class* method_definition = lookup_method(type_name, name);
     if (!method_definition) 
     {
-        classtable->semant_error(this) 
-            << "Dispatch to undefined method " 
-            << name 
-            << ".\n";
+        classtable->semant_error(this) << "Dispatch para um método indefinido " << name << ".\n";
         
         this->set_type(Object);
         return Object;
@@ -1146,15 +1071,8 @@ Symbol static_dispatch_class::check_type() {
         actual_method_args_count = actual_method_args->next(actual_method_args_count);
 
     if (declared_method_args_count != actual_method_args_count) {
-        classtable->semant_error(this) 
-            << "In the dispatch to method " 
-            << method_definition->get_name() 
-            << ", given number of arguments " 
-            << "(" << actual_method_args_count << ")"
-            << " differs from the declared method's "
-            << "number of arguments "
-            << "(" << declared_method_args_count << ")"
-            << ".\n";
+        classtable->semant_error(this) << "No dispatch para método " << method_definition->get_name() << ", o número de argumentos dado" 
+            << "(" << actual_method_args_count << ")" << " difere do número de argumentos declarados " << "(" << declared_method_args_count << ")" << ".\n";
     }
 
     int declared_argument_ix = declared_method_args->first();
@@ -1177,13 +1095,13 @@ Symbol static_dispatch_class::check_type() {
             is_dispatch_valid = false;
 
             classtable->semant_error(this) 
-                << "In the dispatch of the method " 
+                << "No dispatch para o método " 
                 << method_definition->get_name() 
-                << ", type "
+                << ", com tipo "
                 << actual_argument_type 
-                << " of provided argument " 
+                << " de um dado argumento " 
                 << declared_argument->get_name() 
-                << " is not compatible with the corresponding signature type " 
+                << " não é compatível com a assinatura do tipo correspondente." 
                 << declared_argument_type 
                 << " .\n";
         }
@@ -1208,7 +1126,7 @@ Symbol assign_class::check_type() {
     Expression assign_expr = expr;
 
     if (identifier == self) {
-        classtable->semant_error(this) << "Cannot assign to 'self'" << ".\n";
+        classtable->semant_error(this) << "Não pode atribuir 'self'" << ".\n";
         return Object;
     }
 
@@ -1216,9 +1134,7 @@ Symbol assign_class::check_type() {
 
     if (!identifier_type) {
         classtable->semant_error(this) 
-            << "Tried to assign undeclared identifier " 
-            << identifier 
-            << ".\n";
+            << "Tentativa de atribuir um identificado não declarado " << identifier << ".\n";
 
         this->set_type(Object);
         return this->get_type();
@@ -1232,14 +1148,8 @@ Symbol assign_class::check_type() {
     );
 
     if (!does_assign_conform_declared) {
-        classtable->semant_error(this) 
-            << "The identifier " 
-            << identifier 
-            << " has been declared as "
-            << *identifier_type
-            << " but assigned with incompatible type "
-            << assign_expr_type
-            << ".\n";
+        classtable->semant_error(this) << "O identificador " << identifier << " foi declarado como "
+            << *identifier_type << " mas atribuido com um tipo incompatível " << assign_expr_type << ".\n";
 
         this->set_type(Object);
         return Object;
@@ -1281,16 +1191,15 @@ void program_class::semant()
 
     /* ClassTable constructor may do some semantic analysis */
     classtable = new ClassTable(classes);
-    cout << "Constructed classtable" << endl;
 
     /* some semantic analysis code may go here */
+    for (const auto &x : classtable->inh_graph)
+        register_class_and_its_methods(x.second);
     for(int i = classes->first(); classes->more(i); i = classes->next(i)) {
         type_check(classes->nth(i));
     }
-    cout << "Finished typecheck" << endl;
 
     if (classtable->errors()) {
-    cerr << "Compilation halted due to static semantic errors." << endl;
     exit(1);
     }
 }

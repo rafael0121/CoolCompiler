@@ -28,6 +28,7 @@ private:
   void install_user_classes(Classes);
   void build_inheritance_graph(Classes);
   bool check_parents_and_inheritance();
+  std::map<Symbol, Symbol> parent_type_of;
   ostream& error_stream;
 
 public:
@@ -46,6 +47,7 @@ public:
   bool is_subtype_of(Symbol, Symbol);
   bool is_type_defined(Symbol);
   bool is_primitive(Symbol);
+  Symbol get_parent_type_of(Symbol);
 };
 
 
