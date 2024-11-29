@@ -815,7 +815,9 @@ void CgenNode::set_parentnd(CgenNodeP p)
   parentnd = p;
 }
 
-
+void CgenClassTable::code_prototype_object() {
+    str << nds.pop_front()->get_children() << PROTOBJ_SUFFIX;
+}
 
 void CgenClassTable::code()
 {
@@ -832,7 +834,9 @@ void CgenClassTable::code()
 //                   - prototype objects
 //                   - class_nameTab
 //                   - dispatch tables
-//
+
+  if (cgen_debug) cout << "code_prototype_object" << endl;
+  code_prototype_object();
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
