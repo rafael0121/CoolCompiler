@@ -619,9 +619,10 @@ void CgenClassTable::code_constants()
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
-   stringclasstag = 0 /* Change to your String class tag here */;
-   intclasstag =    0 /* Change to your Int class tag here */;
-   boolclasstag =   0 /* Change to your Bool class tag here */;
+   stringclasstag = 0; 
+   intclasstag =    1; 
+   boolclasstag =   2;/
+   objectclasstag = 3 /* Change to your Object class tag here */
 
    enterscope();
    if (cgen_debug) cout << "Building CgenClassTable" << endl;
@@ -815,8 +816,34 @@ void CgenNode::set_parentnd(CgenNodeP p)
   parentnd = p;
 }
 
-void CgenClassTable::code_prototype_object() {
-    str << nds.pop_front()->get_children() << PROTOBJ_SUFFIX;
+void CgenClassTable::code_prototype_object(CgenNodeP nd) {
+
+  // Garbage Collector Tag
+  str << WORD << "-1" << endl;
+
+  // Object Definition
+  str << nd->name << PROTOBJ_SUFFIX << LABEL;
+
+  // Class tag
+  str << WORD << objectclasstag << endl
+
+  // Object size
+  str << WORD << (DEFAULT_OBJFIELDS + ) << endl;
+
+  // Attributtes
+  for(int i = 0; i < nd->attr_count; i++){
+      str << WORD;
+      if(nd->attributes[i].type_decl == Int){
+          inttable.lookup_string("0")->code_ref(str);
+      } else if(nd->attributes[i].type_decl == Str){
+          stringtable.lookup_string("")->code_ref(str);
+      } else if(nd->attributes[i].type_decl == Bool){
+          falsebool.code_ref(str);
+      } else {
+          str << "0";
+      }
+      str << endl;
+  }
 }
 
 void CgenClassTable::code()
@@ -836,7 +863,9 @@ void CgenClassTable::code()
 //                   - dispatch tables
 
   if (cgen_debug) cout << "code_prototype_object" << endl;
-  code_prototype_object();
+  for(List<CgenNode> *l = nds; l; l = l->tl()){
+      code_prototype_object(l->hd());
+  }
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
