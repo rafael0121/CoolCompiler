@@ -14,6 +14,9 @@ typedef CgenClassTable *CgenClassTableP;
 class CgenNode;
 typedef CgenNode *CgenNodeP;
 
+typedef long reg;
+reg cur_register;
+
 class CgenClassTable : public SymbolTable<Symbol,CgenNode> {
 private:
    List<CgenNode> *nds;
@@ -32,7 +35,7 @@ private:
    void code_bools(int);
    void code_select_gc();
    void code_constants();
-   void code_prototype_object(CgenNodeP);
+
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
 // a tree of `CgenNode', and class names are placed
@@ -43,10 +46,17 @@ private:
    void install_classes(Classes cs);
    void build_inheritance_tree();
    void set_relations(CgenNodeP nd);
+
+   
 public:
    CgenClassTable(Classes, ostream& str);
    void code();
    CgenNodeP root();
+   
+   int get_class_size(CgenNode*);   
+   void code_prototype_object(CgenNode*);
+   void code_class_nameTable();
+   void code_dispatch_table();
 };
 
 

@@ -7,3 +7,15 @@ class Main {
   main():Int { 0 };
 };
 
+class Grandparent {
+  first : Object;
+};
+
+class Parent inherits Grandparent {
+  second : Object;
+};
+
+class Child inherits Parent {
+  third : Object;
+  fourth : Object;
+};
