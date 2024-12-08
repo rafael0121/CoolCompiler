@@ -253,7 +253,7 @@ static void emit_gc_assign(ostream& s)
 { s << JAL << "_GenGC_Assign" << endl; }
 
 static void emit_disptable_ref(Symbol sym, ostream& s)
-{  s << sym << DISPTAB_SUFFIX; }
+{  s << WORD << sym << DISPTAB_SUFFIX; }
 
 static void emit_init_ref(Symbol sym, ostream& s)
 { s << sym << CLASSINIT_SUFFIX; }
@@ -903,7 +903,7 @@ void CgenClassTable::code_dispatch_table()
   for (List<CgenNode> *l = nds; l; l = l->tl())
   {
     CgenNode *class_node = l->hd();
-    str << class_node->name << DISPTAB_SUFFIX << endl;
+    str << WORD << class_node->name << DISPTAB_SUFFIX << endl;
     // for (int i = class_node->features->first(); class_node->features->more(i); i = class_node->features->next(i))
     // {
     //   Feature f = class_node->features->nth(i);

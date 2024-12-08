@@ -306,15 +306,15 @@ class_nameTab:
 	.word	IO_init
 	.word	Object_protObj
 	.word	Object_init
-Child_dispTab
-Parent_dispTab
-Grandparent_dispTab
-Main_dispTab
-String_dispTab
-Bool_dispTab
-Int_dispTab
-IO_dispTab
-Object_dispTab
+	.word	Child_dispTab
+	.word	Parent_dispTab
+	.word	Grandparent_dispTab
+	.word	Main_dispTab
+	.word	String_dispTab
+	.word	Bool_dispTab
+	.word	Int_dispTab
+	.word	IO_dispTab
+	.word	Object_dispTab
 	.globl	heap_start
 heap_start:
 	.word	0
@@ -631,15 +631,15 @@ class_nameTab:
 	.word	IO_init
 	.word	Object_protObj
 	.word	Object_init
-Child_dispTab
-Parent_dispTab
-Grandparent_dispTab
-Main_dispTab
-String_dispTab
-Bool_dispTab
-Int_dispTab
-IO_dispTab
-Object_dispTab
+	.word	Child_dispTab
+	.word	Parent_dispTab
+	.word	Grandparent_dispTab
+	.word	Main_dispTab
+	.word	String_dispTab
+	.word	Bool_dispTab
+	.word	Int_dispTab
+	.word	IO_dispTab
+	.word	Object_dispTab
 	.globl	heap_start
 heap_start:
 	.word	0
